@@ -1,0 +1,58 @@
+
+# ==========================================
+# DeckSpawn - Public Repository
+# ==========================================
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# Xcode user settings
+xcuserdata/
+*.xcuserstate
+
+# Build products
+build/
+DerivedData/
+*.ipa
+*.dSYM/
+
+# Swift Package Manager
+.build/
+
+# ==========================================
+# Private / Third-Party Game Assets
+# ==========================================
+
+# 3D character models and animations
+/Resources/Models3D/
+
+# Sound effects and music
+/Resources/Audio/
+
+# AR reference images (character cards)
+/Resources/Assets.xcassets/AR Resources.arresourcegroup/
+
+# ==========================================
+# Additional 3D and audio files
+# ==========================================
+
+*.usdz
+*.usd
+*.usdc
+*.usda
+*.fbx
+*.obj
+*.mtl
+*.glb
+*.gltf
+*.blend
+*.dae
+
+*.wav
+*.mp3
+*.m4a
+*.aiff
+*.aif
+*.caf
+*.ogg

@@ -1,0 +1,1959 @@
+{
+  "sourceLanguage" : "pt-BR",
+  "strings" : {
+    "—" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "—"
+          }
+        }
+      }
+    },
+    "%@ contra %@: empate. Ninguém sofreu dano." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ vs. %2$@: draw. No damage taken."
+          }
+        }
+      }
+    },
+    "%@ ficou sem tempo. Ação automática." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ran out of time. Automatic move."
+          }
+        }
+      }
+    },
+    "%@ venceu %@." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ defeated %2$@."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ venceu %2$@."
+          }
+        }
+      }
+    },
+    "%@ venceu %@. %@ perdeu %lld HP." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ defeated %2$@. %3$@ lost %4$lld HP."
+          }
+        }
+      }
+    },
+    "%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        }
+      }
+    },
+    "%lld / %lld HP" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld HP"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld / %2$lld HP"
+          }
+        }
+      }
+    },
+    "%lld%%" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld%%"
+          }
+        }
+      }
+    },
+    "%llds" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%llds"
+          }
+        }
+      }
+    },
+    "A batalha começa em %lld..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battle starts in %lld..."
+          }
+        }
+      }
+    },
+    "A sala enviou uma resposta inválida." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The room sent an invalid response."
+          }
+        }
+      }
+    },
+    "A sala já possui dois jogadores." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This room already has two players."
+          }
+        }
+      }
+    },
+    "A sala não está mais disponível." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This room is no longer available."
+          }
+        }
+      }
+    },
+    "Aberta" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open"
+          }
+        }
+      }
+    },
+    "AÇÃO CONFIRMADA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ACTION CONFIRMED"
+          }
+        }
+      }
+    },
+    "Ação confirmada. Aguardando o adversário..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move confirmed. Waiting for opponent..."
+          }
+        }
+      }
+    },
+    "Adversário" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opponent"
+          }
+        }
+      }
+    },
+    "ADVERSÁRIO" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OPPONENT"
+          }
+        }
+      }
+    },
+    "ADVERSÁRIO ENCONTRADO" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OPPONENT FOUND"
+          }
+        }
+      }
+    },
+    "Aguardando" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting"
+          }
+        }
+      }
+    },
+    "Aguardando a arena do adversário..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for the opponent's arena..."
+          }
+        }
+      }
+    },
+    "Aguardando confirmação" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for confirmation"
+          }
+        }
+      }
+    },
+    "Aguardando jogador..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for a player..."
+          }
+        }
+      }
+    },
+    "Aguardando o adversário • %llds" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for opponent • %llds"
+          }
+        }
+      }
+    },
+    "Aguardando o adversário confirmar." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for your opponent to confirm."
+          }
+        }
+      }
+    },
+    "Ajustes da experiência AR" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AR experience settings"
+          }
+        }
+      }
+    },
+    "Ambos os jogadores ficaram sem tempo. Ação automática." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Both players ran out of time. Automatic moves."
+          }
+        }
+      }
+    },
+    "ARENA PRONTA" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ARENA READY"
+          }
+        }
+      }
+    },
+    "Áudio e feedback" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Audio & feedback"
+          }
+        }
+      }
+    },
+    "Automático (Sistema)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic (System)"
+          }
+        }
+      }
+    },
+    "CANCELAR PRONTO" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "UNREADY"
+          }
+        }
+      }
+    },
+    "CARTA DETECTADA" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CARD DETECTED"
+          }
+        }
+      }
+    },
+    "CARTA NÃO RECONHECIDA" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CARD NOT RECOGNIZED"
+          }
+        }
+      }
+    },
+    "Carta reconhecida" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Card recognized"
+          }
+        }
+      }
+    },
+    "CARTA RECONHECIDA" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CARD RECOGNIZED"
+          }
+        }
+      }
+    },
+    "Centralize a carta no campo de leitura" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Center the card inside the scanning area"
+          }
+        }
+      }
+    },
+    "Código da sala" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room code"
+          }
+        }
+      }
+    },
+    "CÓDIGO DA SALA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ROOM CODE"
+          }
+        }
+      }
+    },
+    "Código da sala incorreto." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Incorrect room code."
+          }
+        }
+      }
+    },
+    "Código de 6 dígitos" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "6-digit code"
+          }
+        }
+      }
+    },
+    "Conectado" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connected"
+          }
+        }
+      }
+    },
+    "CONECTADO" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CONNECTED"
+          }
+        }
+      }
+    },
+    "Conectado à sala %@." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connected to room %@."
+          }
+        }
+      }
+    },
+    "Conectado como Player 2" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connected as Player 2"
+          }
+        }
+      }
+    },
+    "Conectando..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecting..."
+          }
+        }
+      }
+    },
+    "Configurações" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
+          }
+        }
+      }
+    },
+    "CONFIGURAÇÕES" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SETTINGS"
+          }
+        }
+      }
+    },
+    "Configure sua sala" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set up your room"
+          }
+        }
+      }
+    },
+    "CPU" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CPU"
+          }
+        }
+      }
+    },
+    "Criando sala..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creating room..."
+          }
+        }
+      }
+    },
+    "CRIAR PARTIDA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CREATE MATCH"
+          }
+        }
+      }
+    },
+    "CRIAR SALA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CREATE ROOM"
+          }
+        }
+      }
+    },
+    "Crie uma nova sala" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create a new room"
+          }
+        }
+      }
+    },
+    "DeckSpawn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DeckSpawn"
+          }
+        }
+      }
+    },
+    "DERROTA" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DEFEAT"
+          }
+        }
+      }
+    },
+    "Digite um nome para a sala." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a room name."
+          }
+        }
+      }
+    },
+    "English" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "English"
+          }
+        }
+      }
+    },
+    "Entrando em %@..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Joining %@..."
+          }
+        }
+      }
+    },
+    "ENTRAR" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JOIN"
+          }
+        }
+      }
+    },
+    "ENTRAR EM UMA SALA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JOIN A ROOM"
+          }
+        }
+      }
+    },
+    "ENTRAR NA SALA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "JOIN ROOM"
+          }
+        }
+      }
+    },
+    "Entre na batalha e enfrente seus amigos" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter the battle and challenge your friends"
+          }
+        }
+      }
+    },
+    "Erro enviando pedido de entrada: %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Error sending join request: %@"
+          }
+        }
+      }
+    },
+    "Erro recebendo pedido de entrada: %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Error receiving join request: %@"
+          }
+        }
+      }
+    },
+    "Erro recebendo resposta da sala: %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Error receiving room response: %@"
+          }
+        }
+      }
+    },
+    "Erro sincronizando a partida: %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Error syncing match: %@"
+          }
+        }
+      }
+    },
+    "Escaneie uma carta e confirme" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scan a card and confirm"
+          }
+        }
+      }
+    },
+    "ESCOLHA SEU PERSONAGEM" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CHOOSE YOUR CHARACTER"
+          }
+        }
+      }
+    },
+    "ESCOLHA SUA AÇÃO" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CHOOSE YOUR ACTION"
+          }
+        }
+      }
+    },
+    "Escolha sua ação." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose your move."
+          }
+        }
+      }
+    },
+    "Escolha sua primeira ação." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose your first move."
+          }
+        }
+      }
+    },
+    "Escolha sua próxima ação." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose your next move."
+          }
+        }
+      }
+    },
+    "ESCOLHA UM MODO DE JOGO!" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CHOOSE A GAME MODE!"
+          }
+        }
+      }
+    },
+    "Escolhendo..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choosing..."
+          }
+        }
+      }
+    },
+    "ESCOLHER PERSONAGEM" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CHOOSE CHARACTER"
+          }
+        }
+      }
+    },
+    "Essas preferências ficam salvas para as próximas vezes que o app for aberto." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "These preferences will be saved for the next time you open the app."
+          }
+        }
+      }
+    },
+    "Ex: Arena do Victor" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "e.g., Victor's Arena"
+          }
+        }
+      }
+    },
+    "EXCLUIR SALA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "DELETE ROOM"
+          }
+        }
+      }
+    },
+    "Falha ao entrar na sala: %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to join the room: %@"
+          }
+        }
+      }
+    },
+    "Guarda" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guard"
+          }
+        }
+      }
+    },
+    "GUARDA" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GUARD"
+          }
+        }
+      }
+    },
+    "Idioma" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Language"
+          }
+        }
+      }
+    },
+    "Idioma do jogo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Game language"
+          }
+        }
+      }
+    },
+    "Impacto" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impact"
+          }
+        }
+      }
+    },
+    "IMPACTO" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "IMPACT"
+          }
+        }
+      }
+    },
+    "Impacto > Técnica" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impact > Technique"
+          }
+        }
+      }
+    },
+    "Impacto > Técnica • Técnica > Guarda • Guarda > Impacto" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impact > Technique • Technique > Guard • Guard > Impact"
+          }
+        }
+      }
+    },
+    "Impacto vence Técnica • Técnica vence Guarda • Guarda vence Impacto" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impact beats Technique • Technique beats Guard • Guard beats Impact"
+          }
+        }
+      }
+    },
+    "INVOCANDO..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SUMMONING..."
+          }
+        }
+      }
+    },
+    "Invoque suas cartas e jogue contra a IA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Summon characters with your cards and face the AI"
+          }
+        }
+      }
+    },
+    "Jogador 2 conectado." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Player 2 connected."
+          }
+        }
+      }
+    },
+    "Jogador desconectado. Aguardando outro jogador..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Player disconnected. Waiting for another player..."
+          }
+        }
+      }
+    },
+    "JOGO DE CARTAS COM REALIDADE AUMENTADA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AUGMENTED REALITY CARD GAME"
+          }
+        }
+      }
+    },
+    "Jogue com outro iPhone próximo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Play with another nearby iPhone"
+          }
+        }
+      }
+    },
+    "Leitura concluída" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scan complete"
+          }
+        }
+      }
+    },
+    "LENDO CARTA..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SCANNING CARD..."
+          }
+        }
+      }
+    },
+    "Mantenha a carta imóvel" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold the card still"
+          }
+        }
+      }
+    },
+    "Mantenha a carta imóvel por um instante" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hold the card still for a moment"
+          }
+        }
+      }
+    },
+    "MANTENHA PARADA" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HOLD STEADY"
+          }
+        }
+      }
+    },
+    "Mostre a carta que você quer usar nesta partida" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show the card you want to use in this match"
+          }
+        }
+      }
+    },
+    "Mostre uma carta cadastrada dentro do campo" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Place a registered card inside the scanning area"
+          }
+        }
+      }
+    },
+    "Mrs. Incredible" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mrs. Incredible"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Senhora Incrível"
+          }
+        }
+      }
+    },
+    "MULTIPLAYER" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MULTIPLAYER"
+          }
+        }
+      }
+    },
+    "Não foi possível criar a sala: %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't create the room: %@"
+          }
+        }
+      }
+    },
+    "Não foi possível preparar o pedido de entrada." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't prepare the join request."
+          }
+        }
+      }
+    },
+    "Não foi possível procurar salas: %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't search for rooms: %@"
+          }
+        }
+      }
+    },
+    "Não retire a carta até concluir a leitura" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep the card in place until scanning is complete"
+          }
+        }
+      }
+    },
+    "Nenhuma carta" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No card"
+          }
+        }
+      }
+    },
+    "Nenhuma carta cadastrada foi encontrada" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No registered card was found"
+          }
+        }
+      }
+    },
+    "NOME DA SALA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ROOM NAME"
+          }
+        }
+      }
+    },
+    "O adversário ainda está escolhendo uma carta." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your opponent is still choosing a card."
+          }
+        }
+      }
+    },
+    "O adversário cancelou a seleção." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your opponent canceled their selection."
+          }
+        }
+      }
+    },
+    "O adversário também está pronto." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your opponent is ready too."
+          }
+        }
+      }
+    },
+    "O host encerrou a conexão." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The host ended the connection."
+          }
+        }
+      }
+    },
+    "OK" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
+    "Os dois iPhones precisam permitir acesso à rede local." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Both iPhones must allow access to the local network."
+          }
+        }
+      }
+    },
+    "Partidas próximas" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nearby matches"
+          }
+        }
+      }
+    },
+    "Pedido de entrada inválido." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invalid join request."
+          }
+        }
+      }
+    },
+    "PERDI A CARTA" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CARD LOST"
+          }
+        }
+      }
+    },
+    "PERSONAGEM SELECIONADO" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CHARACTER SELECTED"
+          }
+        }
+      }
+    },
+    "Player 1" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Player 1"
+          }
+        }
+      }
+    },
+    "PLAYER 1" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PLAYER 1"
+          }
+        }
+      }
+    },
+    "Player 2" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Player 2"
+          }
+        }
+      }
+    },
+    "PLAYER 2" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PLAYER 2"
+          }
+        }
+      }
+    },
+    "Português (Brasil)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Portuguese (Brazil)"
+          }
+        }
+      }
+    },
+    "PREPARANDO ARENA..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PREPARING ARENA..."
+          }
+        }
+      }
+    },
+    "Preparando invocação..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing summon..."
+          }
+        }
+      }
+    },
+    "Preparando nova seleção..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing a new selection..."
+          }
+        }
+      }
+    },
+    "Preparando seu personagem..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing your character..."
+          }
+        }
+      }
+    },
+    "Prepare sua próxima ação." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get ready for your next move."
+          }
+        }
+      }
+    },
+    "PREPARE-SE" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GET READY"
+          }
+        }
+      }
+    },
+    "Prepare-se!" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Get ready!"
+          }
+        }
+      }
+    },
+    "Privacidade" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy"
+          }
+        }
+      }
+    },
+    "PRIVACIDADE" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PRIVACY"
+          }
+        }
+      }
+    },
+    "Privada" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Private"
+          }
+        }
+      }
+    },
+    "PRIVADA" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PRIVATE"
+          }
+        }
+      }
+    },
+    "Privado" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Private"
+          }
+        }
+      }
+    },
+    "PROCURANDO CARTA" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SEARCHING FOR CARD"
+          }
+        }
+      }
+    },
+    "Procurando salas disponíveis..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Searching for available rooms..."
+          }
+        }
+      }
+    },
+    "Procurando salas..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Searching for rooms..."
+          }
+        }
+      }
+    },
+    "PRONTO" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "READY"
+          }
+        }
+      }
+    },
+    "Pública" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Public"
+          }
+        }
+      }
+    },
+    "PÚBLICA" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PUBLIC"
+          }
+        }
+      }
+    },
+    "Público" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Public"
+          }
+        }
+      }
+    },
+    "REMOVENDO PERSONAGEM..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "REMOVING CHARACTER..."
+          }
+        }
+      }
+    },
+    "REMOVENDO..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "REMOVING..."
+          }
+        }
+      }
+    },
+    "Reposicione a carta" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reposition the card"
+          }
+        }
+      }
+    },
+    "Reposicione a carta dentro do campo" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reposition the card inside the scanning area"
+          }
+        }
+      }
+    },
+    "RETIRE A CARTA" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "REMOVE THE CARD"
+          }
+        }
+      }
+    },
+    "Retire a carta da câmera para iniciar uma nova leitura" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove the card from view to start a new scan"
+          }
+        }
+      }
+    },
+    "Retire a carta para escolher outra" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove the card to choose another"
+          }
+        }
+      }
+    },
+    "RODADA %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ROUND %lld"
+          }
+        }
+      }
+    },
+    "SAIR DA SALA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LEAVE ROOM"
+          }
+        }
+      }
+    },
+    "SALA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ROOM"
+          }
+        }
+      }
+    },
+    "Sala criada. Aguardando jogador..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Room created. Waiting for a player..."
+          }
+        }
+      }
+    },
+    "Sala privada" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Private room"
+          }
+        }
+      }
+    },
+    "Sala pública" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Public room"
+          }
+        }
+      }
+    },
+    "SALAS DISPONÍVEIS" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AVAILABLE ROOMS"
+          }
+        }
+      }
+    },
+    "SINGLEPLAYER" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SINGLEPLAYER"
+          }
+        }
+      }
+    },
+    "Som" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sound"
+          }
+        }
+      }
+    },
+    "SUAS CARTAS GANHAM VIDA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BRING YOUR CARDS TO LIFE"
+          }
+        }
+      }
+    },
+    "Técnica" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Technique"
+          }
+        }
+      }
+    },
+    "TÉCNICA" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TECHNIQUE"
+          }
+        }
+      }
+    },
+    "Tempo esgotado. %@ foi escolhido automaticamente." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time's up. %@ was chosen automatically."
+          }
+        }
+      }
+    },
+    "Tempo esgotado. Ação automática." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time's up. Automatic move."
+          }
+        }
+      }
+    },
+    "Tempo esgotado. Aguardando o resultado do host..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Time's up. Waiting for the host's result..."
+          }
+        }
+      }
+    },
+    "Tente novamente com uma carta cadastrada" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try again with a registered card"
+          }
+        }
+      }
+    },
+    "TROCAR CARTA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CHANGE CARD"
+          }
+        }
+      }
+    },
+    "Um código de 6 dígitos será gerado quando a sala for criada." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A 6-digit code will be generated when the room is created."
+          }
+        }
+      }
+    },
+    "Veja partidas disponíveis" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Browse available matches"
+          }
+        }
+      }
+    },
+    "Vibração" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vibration"
+          }
+        }
+      }
+    },
+    "VITÓRIA" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VICTORY"
+          }
+        }
+      }
+    },
+    "Você" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You"
+          }
+        }
+      }
+    },
+    "VOCÊ" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YOU"
+          }
+        }
+      }
+    },
+    "Você é o host" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You are the host"
+          }
+        }
+      }
+    },
+    "Você entrou na sala." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You joined the room."
+          }
+        }
+      }
+    },
+    "Você escolheu %@. CPU está escolhendo..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You chose %@. CPU is choosing..."
+          }
+        }
+      }
+    },
+    "VOCÊ ESTÁ PRONTO" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "YOU'RE READY"
+          }
+        }
+      }
+    },
+    "Voltar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back"
+          }
+        }
+      }
+    },
+    "VOLTAR À SALA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BACK TO ROOM"
+          }
+        }
+      }
+    },
+    "Voltar ao menu" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Back to menu"
+          }
+        }
+      }
+    },
+    "VOLTAR AO MENU" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "BACK TO MENU"
+          }
+        }
+      }
+    },
+    "VS" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VS"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.3"
+}
