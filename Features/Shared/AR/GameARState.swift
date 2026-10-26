@@ -44,6 +44,26 @@ final class GameARState: ObservableObject {
         }
     }
 
+    // Identifica qual tela AR pode receber/enviar callbacks nesta sessao.
+    private var activeARCoordinatorID: UUID?
+
+    func attachARCoordinator(_ id: UUID) {
+        activeARCoordinatorID = id
+    }
+
+    func isCurrentARCoordinator(_ id: UUID) -> Bool {
+        activeARCoordinatorID == id
+    }
+
+    func detachARCoordinator(_ id: UUID) {
+        // Uma tela antiga nao pode remover handlers da nova.
+        guard activeARCoordinatorID == id else { return }
+        activeARCoordinatorID = nil
+        onRemoveCharacter = nil
+        onPrepareBattle = nil
+        onBattleTurnAnimation = nil
+    }
+
     // Impede reproducoes duplicadas caso o encerramento seja recebido duas vezes.
     private var finalBattleAudioHandled = false
 
@@ -138,6 +158,7 @@ final class GameARState: ObservableObject {
     }
 
     func resetForNewSession() {
+        activeARCoordinatorID = nil
         finalBattleAudioHandled = false
         SoundManager.shared.stopBattleResult()
         phase = .searching

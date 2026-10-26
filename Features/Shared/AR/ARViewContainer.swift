@@ -49,8 +49,8 @@ struct ARViewContainer: UIViewRepresentable {
 
 
         context.coordinator.arView = arView
-
         arView.session.delegate = context.coordinator
+        state.attachARCoordinator(context.coordinator.identifier)
 
 
 
@@ -261,8 +261,12 @@ extension ARViewContainer {
         private var lastValidScanSample: TimeInterval?
         private var scanCardName: String?
 
-        // Cancels obsolete callbacks when an AR view is dismantled.
+        // Somente a tela AR atualmente montada pode modificar GameARState.
+        let identifier = UUID()
         private var isDetached = false
+        private var isCurrentSession: Bool {
+            !isDetached && state.isCurrentARCoordinator(identifier)
+        }
 
 
 
@@ -326,27 +330,19 @@ extension ARViewContainer {
 
 
         func detach() {
-
             isDetached = true
             scanGeneration += 1
             searchGeneration += 1
             battleAudioGeneration += 1
-
-            state.onRemoveCharacter = nil
-
-            state.onPrepareBattle = nil
-
-            state.onBattleTurnAnimation = nil
-
+            state.detachARCoordinator(identifier)
             arView = nil
-
         }
 
 
 
         func session(_ session: ARSession, didAdd anchors: [ARAnchor]) {
             DispatchQueue.main.async { [weak self] in
-                guard let self, !self.isDetached else { return }
+                guard let self, self.isCurrentSession else { return }
                 for anchor in anchors {
                     if let image = anchor as? ARImageAnchor {
                         self.receiveImageAnchor(image)
@@ -363,7 +359,7 @@ extension ARViewContainer {
 
         func session(_ session: ARSession, didUpdate anchors: [ARAnchor]) {
             DispatchQueue.main.async { [weak self] in
-                guard let self, !self.isDetached,
+                guard let self, self.isCurrentSession,
                       !self.interactionLocked else { return }
                 for anchor in anchors {
                     if let image = anchor as? ARImageAnchor {
@@ -375,7 +371,7 @@ extension ARViewContainer {
 
         func session(_ session: ARSession, didRemove anchors: [ARAnchor]) {
             DispatchQueue.main.async { [weak self] in
-                guard let self, !self.isDetached else { return }
+                guard let self, self.isCurrentSession else { return }
                 for anchor in anchors {
                     guard anchor.identifier == self.currentImageAnchorID else {
                         continue
@@ -393,7 +389,7 @@ extension ARViewContainer {
         // All scan state and anchor identifiers are owned by the main queue.
         // Only the first tracked image participates in this scan attempt.
         private func receiveImageAnchor(_ image: ARImageAnchor) {
-            guard !isDetached else { return }
+            guard isCurrentSession else { return }
             if let currentImageAnchorID,
                currentImageAnchorID != image.identifier {
                 return
@@ -419,7 +415,7 @@ extension ARViewContainer {
 
         ) {
 
-            guard !isDetached, let arView else { return }
+            guard isCurrentSession, let arView else { return }
 
             if waitingForCardClear {
 
@@ -612,7 +608,7 @@ extension ARViewContainer {
         func startSearching() {
 
             guard
-                !isDetached,
+                isCurrentSession,
                 !interactionLocked,
 
                 !waitingForCardClear
@@ -651,14 +647,12 @@ extension ARViewContainer {
 
 
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-
-
-
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
+                guard let self else { return }
                 guard
 
                     generation == self.searchGeneration,
-                    !self.isDetached,
+                    self.isCurrentSession,
                     !self.interactionLocked,
 
                     !self.waitingForCardClear,
@@ -681,14 +675,12 @@ extension ARViewContainer {
 
 
 
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-
-
-
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                    guard let self else { return }
                     guard
 
                         generation == self.searchGeneration,
-                        !self.isDetached,
+                        self.isCurrentSession,
                         !self.waitingForCardClear
 
                     else {
@@ -764,9 +756,8 @@ extension ARViewContainer {
                 guard
 
                     generation == self.searchGeneration,
-
+                    self.isCurrentSession,
                     !self.interactionLocked
-
                 else {
 
                     return
@@ -854,7 +845,7 @@ extension ARViewContainer {
 
                 generation == scanGeneration,
                 isScanning,
-                !isDetached
+                isCurrentSession
 
             else {
 
@@ -942,9 +933,8 @@ extension ARViewContainer {
 
 
         private func completeScan() {
-
             guard
-
+                isCurrentSession,
                 let cardTransform = latestCardTransform,
 
                 selectedCard != nil
@@ -964,8 +954,7 @@ extension ARViewContainer {
             scanCardName = nil
             scanGeneration += 1
             interactionLocked = true
-
-
+            let generation = scanGeneration
 
             state.scanProgress = 1
 
@@ -992,9 +981,12 @@ extension ARViewContainer {
             DispatchQueue.main.asyncAfter(
 
                 deadline: .now() + summonPreDelay
-
-            ) {
-
+            ) { [weak self] in
+                guard let self,
+                      self.isCurrentSession,
+                      self.scanGeneration == generation,
+                      self.interactionLocked,
+                      self.state.phase == .confirmed else { return }
                 self.state.phase = .summoning
 
 
@@ -1026,7 +1018,7 @@ extension ARViewContainer {
 
 
         private func recoverFromSummonFailure(_ reason: String) {
-            guard !isDetached else { return }
+            guard isCurrentSession else { return }
             print("⚠️ Recovering scanner:", reason)
             clearCurrentArena()
             interactionLocked = false
@@ -1052,12 +1044,9 @@ extension ARViewContainer {
         }
 
         private func createArenaAnchor(
-
             cardTransform: simd_float4x4
-
         ) {
-
-            guard let arView,
+            guard isCurrentSession, let arView,
                   let frame = arView.session.currentFrame else {
                 recoverFromSummonFailure("AR frame unavailable")
                 return
@@ -1171,7 +1160,7 @@ extension ARViewContainer {
 
             let expectedAnchorID = arenaAnchor.identifier
             DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in
-                guard let self, !self.isDetached,
+                guard let self, self.isCurrentSession,
                       self.arenaAnchorID == expectedAnchorID,
                       !self.arenaRendered else { return }
                 self.recoverFromSummonFailure("Arena anchor was not delivered")
@@ -1181,12 +1170,10 @@ extension ARViewContainer {
 
 
         private func renderArena(
-
             on arAnchor: ARAnchor
-
         ) {
-
-            guard let arView, let selectedCard else {
+            guard isCurrentSession,
+                  let arView, let selectedCard else {
                 recoverFromSummonFailure("Missing AR view or selected card")
                 return
             }
@@ -1339,11 +1326,9 @@ extension ARViewContainer {
 
 
         func prepareBattle(
-
             with enemy: CardDefinition
-
         ) {
-
+            guard isCurrentSession else { return }
             battleAudioGeneration += 1
 
             guard
@@ -1651,13 +1636,10 @@ extension ARViewContainer {
                     .now()
 
                     + revealStart
-
-            ) {
-
-
-
+            ) { [weak self] in
+                guard let self else { return }
                 // Visual reveal only. The AR scan and battle timing are unchanged.
-                guard !self.isDetached,
+                guard self.isCurrentSession,
                       self.currentArenaEntity === arenaAnchor,
                       self.currentEnemyEntity === enemy else {
                     return
@@ -1713,8 +1695,13 @@ extension ARViewContainer {
                     .now()
 
                     + smokeStopTime
+            ) { [weak self] in
+                guard let self,
+                      self.isCurrentSession,
+                      self.currentArenaEntity === arenaAnchor,
+                      self.currentEnemyEntity === enemy,
+                      self.state.phase == .enemySummoning else { return }
 
-            ) {
 
 
 
@@ -1759,8 +1746,13 @@ extension ARViewContainer {
                     .now()
 
                     + cleanupTime
+            ) { [weak self] in
+                guard let self,
+                      self.isCurrentSession,
+                      self.currentArenaEntity === arenaAnchor,
+                      self.currentEnemyEntity === enemy,
+                      self.state.phase == .enemySummoning else { return }
 
-            ) {
 
 
 
@@ -1791,10 +1783,14 @@ extension ARViewContainer {
                     .now()
 
                     + cleanupTime
-
                     + 0.45
+            ) { [weak self] in
+                guard let self,
+                      self.isCurrentSession,
+                      self.currentArenaEntity === arenaAnchor,
+                      self.currentEnemyEntity === enemy,
+                      self.state.phase == .enemySummoning else { return }
 
-            ) {
 
 
 
@@ -1821,11 +1817,13 @@ extension ARViewContainer {
                         .now()
 
                         + self.battleFacingDelay
-
-                ) {
-
-
-
+                ) { [weak self] in
+                    guard let self,
+                          self.isCurrentSession,
+                          self.currentArenaEntity === arenaAnchor,
+                          self.currentCharacterEntity === player,
+                          self.currentEnemyEntity === enemy,
+                          self.state.phase == .enemySummoning else { return }
                     self.moveCharactersToBattleStance(
 
                         player: player,
@@ -1853,23 +1851,16 @@ extension ARViewContainer {
 
 
         private func moveCharactersToBattleStance(
-
             player: Entity,
-
             enemy: Entity,
-
             playerYawOffset: Float,
-
             enemyYawOffset: Float
-
         ) {
-
-
-
-            guard let arenaEntity =
-
-                    currentArenaEntity
-
+            guard isCurrentSession,
+                  state.phase == .enemySummoning,
+                  currentCharacterEntity === player,
+                  currentEnemyEntity === enemy,
+                  let arenaEntity = currentArenaEntity
             else {
 
                 return
@@ -2009,19 +2000,17 @@ extension ARViewContainer {
             DispatchQueue.main.asyncAfter(
 
                 deadline:
-
                     .now()
-
                     + battleTurnDuration
-
                     + 0.15
-
-            ) {
-
-
-
+            ) { [weak self] in
+                guard let self,
+                      self.isCurrentSession,
+                      self.state.phase == .enemySummoning,
+                      self.currentArenaEntity === arenaEntity,
+                      self.currentCharacterEntity === player,
+                      self.currentEnemyEntity === enemy else { return }
                 self.state.phase =
-
                     .battleReady
 
 
@@ -2039,11 +2028,8 @@ extension ARViewContainer {
 
 
         func removeCurrentCharacter() {
-
-
-
             guard
-
+                isCurrentSession,
                 !removalInProgress,
 
                 state.phase == .removing,
@@ -2113,8 +2099,13 @@ extension ARViewContainer {
             DispatchQueue.main.asyncAfter(
 
                 deadline: .now() + 0.80
+            ) { [weak self] in
+                guard let self,
+                      self.isCurrentSession,
+                      self.currentArenaEntity === arenaEntity,
+                      self.currentCharacterEntity === character,
+                      self.state.phase == .removing else { return }
 
-            ) {
 
 
 
@@ -2175,8 +2166,13 @@ extension ARViewContainer {
             DispatchQueue.main.asyncAfter(
 
                 deadline: .now() + 1.90
+            ) { [weak self] in
+                guard let self,
+                      self.isCurrentSession,
+                      self.currentArenaEntity === arenaEntity,
+                      self.currentCharacterEntity === character,
+                      self.state.phase == .removing else { return }
 
-            ) {
 
 
 
@@ -2193,8 +2189,13 @@ extension ARViewContainer {
             DispatchQueue.main.asyncAfter(
 
                 deadline: .now() + 2.50
+            ) { [weak self] in
+                guard let self,
+                      self.isCurrentSession,
+                      self.currentArenaEntity === arenaEntity,
+                      self.currentCharacterEntity === character,
+                      self.state.phase == .removing else { return }
 
-            ) {
 
 
 
@@ -2227,8 +2228,13 @@ extension ARViewContainer {
             DispatchQueue.main.asyncAfter(
 
                 deadline: .now() + 3.30
+            ) { [weak self] in
+                guard let self,
+                      self.isCurrentSession,
+                      self.currentArenaEntity === arenaEntity,
+                      self.currentCharacterEntity === character,
+                      self.state.phase == .removing else { return }
 
-            ) {
 
 
 
@@ -2247,8 +2253,13 @@ extension ARViewContainer {
             DispatchQueue.main.asyncAfter(
 
                 deadline: .now() + 3.70
+            ) { [weak self] in
+                guard let self,
+                      self.isCurrentSession,
+                      self.currentArenaEntity === arenaEntity,
+                      self.currentCharacterEntity === character,
+                      self.state.phase == .removing else { return }
 
-            ) {
 
 
 
@@ -3475,7 +3486,7 @@ extension ARViewContainer {
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                 [weak self] in
                 guard let self,
-                      !self.isDetached,
+                      self.isCurrentSession,
                       self.currentArenaEntity === arenaAnchor else {
                     pulse.removeFromParent()
                     return
@@ -3556,13 +3567,10 @@ extension ARViewContainer {
                     .now()
 
                     + revealStart
-
-            ) {
-
-
-
+            ) { [weak self] in
+                guard let self else { return }
                 // Visual reveal only. The AR scan and battle timing are unchanged.
-                guard !self.isDetached,
+                guard self.isCurrentSession,
                       self.currentArenaEntity === arenaAnchor,
                       self.currentCharacterEntity === character else {
                     return
@@ -3618,8 +3626,13 @@ extension ARViewContainer {
                     .now()
 
                     + smokeStopTime
+            ) { [weak self] in
+                guard let self,
+                      self.isCurrentSession,
+                      self.currentArenaEntity === arenaAnchor,
+                      self.currentCharacterEntity === character,
+                      self.state.phase == .summoning else { return }
 
-            ) {
 
 
 
@@ -3662,8 +3675,13 @@ extension ARViewContainer {
                     .now()
 
                     + cleanupTime
+            ) { [weak self] in
+                guard let self,
+                      self.isCurrentSession,
+                      self.currentArenaEntity === arenaAnchor,
+                      self.currentCharacterEntity === character,
+                      self.state.phase == .summoning else { return }
 
-            ) {
 
 
 
@@ -3698,10 +3716,14 @@ extension ARViewContainer {
                     .now()
 
                     + cleanupTime
-
                     + 0.50
+            ) { [weak self] in
+                guard let self,
+                      self.isCurrentSession,
+                      self.currentArenaEntity === arenaAnchor,
+                      self.currentCharacterEntity === character,
+                      self.state.phase == .summoning else { return }
 
-            ) {
 
 
 
@@ -4359,7 +4381,7 @@ extension ARViewContainer {
             result: BattleRoundResult,
             winner: BattleWinner?
         ) {
-
+            guard isCurrentSession else { return }
             // O som final e disparado por GameARState.animateBattleTurn.
             // Aqui mantemos somente as animacoes visuais dos personagens.
 
@@ -4413,7 +4435,7 @@ extension ARViewContainer {
                         let self,
                         let player,
                         let enemy,
-                        !self.isDetached,
+                        self.isCurrentSession,
                         self.battleAudioGeneration == audioGeneration,
                         self.currentCharacterEntity === player,
                         self.currentEnemyEntity === enemy
