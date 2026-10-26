@@ -931,13 +931,7 @@ private struct BattleHUDOverlay: View {
             ZStack {
                 Circle()
                     .stroke(BattleTheme.violet.opacity(0.30), lineWidth: 3)
-                Circle()
-                    .trim(from: 0, to: 0.75)
-                    .stroke(
-                        AngularGradient(colors: [BattleTheme.cyan, BattleTheme.violet, BattleTheme.cyan], center: .center),
-                        style: StrokeStyle(lineWidth: 5, lineCap: .round)
-                    )
-                    .rotationEffect(.degrees(-90))
+                BattleCountdownProgressRing()
                 Text("\(seconds)")
                     .font(.system(size: 76, weight: .black, design: .rounded))
                     .monospacedDigit()
@@ -958,6 +952,34 @@ private struct BattleHUDOverlay: View {
                 )
         }
         .shadow(color: .black.opacity(0.45), radius: 25)
+    }
+}
+
+
+// Barra circular independente dos números: avança continuamente pelos 3 segundos
+// sem reiniciar sua animação quando o texto muda de 3 para 2 e depois para 1.
+private struct BattleCountdownProgressRing: View {
+    @State private var progress: CGFloat = 1.0
+
+    var body: some View {
+        Circle()
+            .trim(from: 0, to: progress)
+            .stroke(
+                AngularGradient(
+                    colors: [BattleTheme.cyan, BattleTheme.violet, BattleTheme.cyan],
+                    center: .center
+                ),
+                style: StrokeStyle(lineWidth: 5, lineCap: .round)
+            )
+            .rotationEffect(.degrees(-90))
+            .onAppear {
+                // O anel comeca cheio e esvazia ate a batalha iniciar.
+                // O @State pertence ao anel (nao ao texto, que usa .id(seconds)).
+                progress = 1.0
+                withAnimation(.linear(duration: Double(BattleRules.startCountdownSeconds))) {
+                    progress = 0.0
+                }
+            }
     }
 }
 
