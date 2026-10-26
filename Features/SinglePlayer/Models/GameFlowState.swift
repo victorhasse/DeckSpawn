@@ -83,6 +83,21 @@ final class GameFlowState: ObservableObject {
         return enemy
     }
 
+    func enemySummonDidFail() {
+        guard screen == .singlePlayer,
+              singlePlayerPhase == .summoningEnemy else { return }
+        resetBattleClocks()
+        playerCard = nil
+        enemyCard = nil
+        battleState = nil
+        lastTurnMessage = nil
+        isResolvingTurn = false
+        battleCountdown = nil
+        isBattleStarted = false
+        turnSecondsRemaining = BattleRules.turnDurationSeconds
+        singlePlayerPhase = .choosingCard
+    }
+
     func enemySummonDidFinish() {
         guard let playerCard, let enemyCard else { return }
         battleState = BattleState.newBattle(player: playerCard, enemy: enemyCard)

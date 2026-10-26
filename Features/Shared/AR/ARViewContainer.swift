@@ -1346,16 +1346,29 @@ extension ARViewContainer {
                     currentCharacterEntity
 
             else {
-
-                state.phase = .active
-
+                recoverFromSummonFailure("Arena unavailable while preparing battle")
+                state.reportBattlePreparationFailure(.arenaUnavailable)
                 return
-
             }
 
-
-
             interactionLocked = true
+
+
+
+            guard let enemyEntity =
+
+                    makeCharacter(
+
+                        enemy
+
+                    )
+
+            else {
+                interactionLocked = false
+                state.phase = .active
+                state.reportBattlePreparationFailure(.enemyModelUnavailable)
+                return
+            }
 
 
 
@@ -1390,24 +1403,6 @@ extension ARViewContainer {
                 timingFunction: .easeInOut
 
             )
-
-
-
-            guard let enemyEntity =
-
-                    makeCharacter(
-
-                        enemy
-
-                    )
-
-            else {
-
-                state.phase = .active
-
-                return
-
-            }
 
 
 
@@ -1798,14 +1793,12 @@ extension ARViewContainer {
 
 
 
-                guard let player =
-
-                        self.currentCharacterEntity
-
-                else {
-
+                guard let player = self.currentCharacterEntity else {
+                    self.recoverFromSummonFailure(
+                        "Player entity unavailable during enemy summon"
+                    )
+                    self.state.reportBattlePreparationFailure(.arenaUnavailable)
                     return
-
                 }
 
 

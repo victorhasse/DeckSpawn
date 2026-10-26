@@ -16,6 +16,9 @@ struct SinglePlayerView: View {
 
     private var showingSettings = false
 
+    @State private var showingEnemyPreparationError = false
+    @State private var enemyPreparationErrorMessage = ""
+
     var body: some View {
 
         GeometryReader { geometry in
@@ -78,6 +81,31 @@ struct SinglePlayerView: View {
 
         }
 
+        .onChange(of: arState.battlePreparationFailureEvent) { _, event in
+            guard let event,
+                  gameFlow.singlePlayerPhase == .summoningEnemy else { return }
+
+            gameFlow.enemySummonDidFail()
+            switch event.failure {
+            case .enemyModelUnavailable:
+                enemyPreparationErrorMessage = DeckSpawnL10n.text(
+                    "Não foi possível carregar o adversário. Toque em Pronto para tentar novamente ou em Trocar Personagem."
+                )
+            case .arenaUnavailable:
+                enemyPreparationErrorMessage = DeckSpawnL10n.text(
+                    "A arena foi perdida. Escaneie sua carta novamente."
+                )
+            }
+            showingEnemyPreparationError = true
+        }
+        .alert(
+            DeckSpawnL10n.text("Falha ao preparar adversário"),
+            isPresented: $showingEnemyPreparationError
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(enemyPreparationErrorMessage)
+        }
         .sheet(
 
             isPresented:

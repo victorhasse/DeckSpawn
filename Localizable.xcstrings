@@ -108,6 +108,17 @@
         }
       }
     },
+    "A arena foi perdida. Escaneie sua carta novamente." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The arena was lost. Scan your card again."
+          }
+        }
+      }
+    },
     "A batalha começa em %lld..." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -843,6 +854,17 @@
         }
       }
     },
+    "Falha ao preparar adversário" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not prepare opponent"
+          }
+        }
+      }
+    },
     "Guarda" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1102,6 +1124,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "MULTIPLAYER"
+          }
+        }
+      }
+    },
+    "Não foi possível carregar o adversário. Toque em Pronto para tentar novamente ou em Trocar Personagem." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not load the opponent. Tap Ready to try again, or Change Character."
           }
         }
       }

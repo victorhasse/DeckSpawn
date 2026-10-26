@@ -17,6 +17,17 @@ enum CardScanPhase: Equatable {
     case battleReady
 }
 
+enum BattlePreparationFailure: Equatable {
+    case arenaUnavailable
+    case enemyModelUnavailable
+}
+
+struct BattlePreparationFailureEvent: Equatable {
+    // Cada tentativa possui seu proprio ID, mesmo se falhar pelo mesmo motivo.
+    let id = UUID()
+    let failure: BattlePreparationFailure
+}
+
 final class GameARState: ObservableObject {
 
     @Published var phase: CardScanPhase = .searching
@@ -25,6 +36,12 @@ final class GameARState: ObservableObject {
     @Published var scanSecondsRemaining: Double = 0
     @Published var recognizedCardName: String?
     @Published var activeCard: CardDefinition?
+    // Uma mudanca observavel especifica evita perder falhas sincrona na RA.
+    @Published private(set) var battlePreparationFailureEvent: BattlePreparationFailureEvent?
+
+    func reportBattlePreparationFailure(_ failure: BattlePreparationFailure) {
+        battlePreparationFailureEvent = BattlePreparationFailureEvent(failure: failure)
+    }
 
     @Published var soundEnabled: Bool {
         didSet {
@@ -113,9 +130,15 @@ final class GameARState: ObservableObject {
         guard phase == .active else { return }
 
         finalBattleAudioHandled = false
+        battlePreparationFailureEvent = nil
         SoundManager.shared.stopBattleResult()
+        guard let onPrepareBattle else {
+            phase = .active
+            reportBattlePreparationFailure(.arenaUnavailable)
+            return
+        }
         phase = .enemySummoning
-        onPrepareBattle?(enemy)
+        onPrepareBattle(enemy)
     }
 
     /// Recebe o resultado FINAL, ja convertido para a perspectiva do iPhone local.
@@ -167,6 +190,7 @@ final class GameARState: ObservableObject {
         scanSecondsRemaining = 0
         recognizedCardName = nil
         activeCard = nil
+        battlePreparationFailureEvent = nil
         onRemoveCharacter = nil
         onPrepareBattle = nil
         onBattleTurnAnimation = nil
