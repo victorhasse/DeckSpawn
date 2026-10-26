@@ -32,6 +32,8 @@ final class GameFlowState: ObservableObject {
 
     private var countdownGeneration = 0
     private var turnGeneration = 0
+    // Invalida resoluções atrasadas quando a batalha ou a tela muda.
+    private var battleGeneration = 0
 
     func startSinglePlayer() {
         resetBattleClocks()
@@ -122,8 +124,9 @@ final class GameFlowState: ObservableObject {
         }
 
         let currentState = battleState
+        let generation = battleGeneration
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.70) { [weak self] in
-            guard let self else { return }
+            guard let self, self.battleGeneration == generation else { return }
             let resolution = BattleEngine.resolveTurn(
                 state: currentState,
                 playerMove: playerMove,
@@ -153,7 +156,7 @@ final class GameFlowState: ObservableObject {
             DispatchQueue.main.asyncAfter(
                 deadline: .now() + BattleRules.roundResultDisplaySeconds
             ) { [weak self] in
-                guard let self else { return }
+                guard let self, self.battleGeneration == generation else { return }
                 self.isResolvingTurn = false
                 self.lastTurnMessage = DeckSpawnL10n.text("Escolha sua próxima ação.")
                 self.startTurnTimer()
@@ -225,5 +228,6 @@ final class GameFlowState: ObservableObject {
     private func resetBattleClocks() {
         countdownGeneration += 1
         turnGeneration += 1
+        battleGeneration += 1
     }
 }
