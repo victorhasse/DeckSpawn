@@ -274,6 +274,9 @@ extension ARViewContainer {
 
         private var arenaRendered = false
 
+        // Descarta resultados de carregamentos que terminaram apos o reset.
+        private var assetLoadGeneration = 0
+
 
 
         private var currentArenaAnchor: ARAnchor?
@@ -315,6 +318,27 @@ extension ARViewContainer {
         // Invalida callbacks de rodadas anteriores ao iniciar ou limpar uma batalha.
         private var battleAudioGeneration = 0
 
+        #if DEBUG
+        // Diagnostico leve: registre tempos de carga no console do Xcode.
+        // O codigo e removido em builds Release.
+        private func logLoadingDuration(
+            _ operation: String,
+            startedAt: TimeInterval
+        ) {
+            let durationMilliseconds =
+                (CACurrentMediaTime() - startedAt) * 1_000
+            let thread = Thread.isMainThread ? "main" : "background"
+            print(
+                String(
+                    format: "[DeckSpawn][Perf] %@ | %.1f ms WALL | callback=%@",
+                    operation,
+                    durationMilliseconds,
+                    thread
+                )
+            )
+        }
+        #endif
+
 
 
         init(
@@ -334,6 +358,7 @@ extension ARViewContainer {
             scanGeneration += 1
             searchGeneration += 1
             battleAudioGeneration += 1
+            assetLoadGeneration += 1
             state.detachARCoordinator(identifier)
             arView = nil
         }
@@ -1172,6 +1197,15 @@ extension ARViewContainer {
         private func renderArena(
             on arAnchor: ARAnchor
         ) {
+            #if DEBUG
+            let loadingStartedAt = CACurrentMediaTime()
+            defer {
+                logLoadingDuration(
+                    "renderArena setup (async load started)",
+                    startedAt: loadingStartedAt
+                )
+            }
+            #endif
             guard isCurrentSession,
                   let arView, let selectedCard else {
                 recoverFromSummonFailure("Missing AR view or selected card")
@@ -1220,106 +1254,61 @@ extension ARViewContainer {
 
 
 
-            guard let character =
+            // Apresenta o palco imediatamente; o download/processamento dos USDZ
+            // nao pode bloquear a camera enquanto o personagem e preparado.
+            arView.scene.addAnchor(anchorEntity)
 
-                    makeCharacter(
+            let expectedGeneration = assetLoadGeneration
+            let expectedScan = scanGeneration
+            let expectedAnchor = arAnchor.identifier
+            let card = selectedCard
 
-                        selectedCard
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let character = await self.makeCharacter(card)
 
+                guard self.isCurrentSession,
+                      self.assetLoadGeneration == expectedGeneration,
+                      self.scanGeneration == expectedScan,
+                      self.arenaAnchorID == expectedAnchor,
+                      self.currentArenaEntity === anchorEntity,
+                      self.state.phase == .summoning else {
+                    self.clearAnimationState(for: character)
+                    return
+                }
+
+                guard let character else {
+                    self.recoverFromSummonFailure(
+                        "Character model failed to load"
                     )
+                    return
+                }
 
-            else {
-                recoverFromSummonFailure("Character model failed to load")
-                return
+                self.currentCharacterEntity = character
+                self.orientCharacter(
+                    character,
+                    towardCameraFrom: arAnchor.transform,
+                    yawOffset: card.yawOffset
+                )
+                character.position = SIMD3<Float>(
+                    0, self.stageHeight, 0
+                )
+                character.scale = SIMD3<Float>(repeating: 0.90)
+
+                print(
+                    "👤 Invocando:", card.displayName,
+                    "| carta:", card.referenceImageName, "→", card.modelName
+                )
+
+                self.runSummonAnimation(
+                    character: character,
+                    arenaAnchor: anchorEntity,
+                    aura: aura,
+                    smokeOuter: smokeOuter,
+                    smokeInner: smokeInner,
+                    magic: magic
+                )
             }
-
-            currentCharacterEntity =
-
-                character
-
-
-
-            orientCharacter(
-
-                character,
-
-                towardCameraFrom:
-
-                    arAnchor.transform,
-
-                yawOffset:
-
-                    selectedCard.yawOffset
-
-            )
-
-
-
-            character.position =
-
-                SIMD3<Float>(
-
-                    0,
-
-                    self.stageHeight,
-
-                    0
-
-                )
-
-
-
-            character.scale =
-
-                SIMD3<Float>(
-
-                    repeating: 0.90
-
-                )
-
-
-
-            arView.scene.addAnchor(
-
-                anchorEntity
-
-            )
-
-
-
-            print(
-
-                "👤 Invocando:",
-
-                selectedCard.displayName,
-
-                "| carta:",
-
-                selectedCard.referenceImageName,
-
-                "→",
-
-                selectedCard.modelName
-
-            )
-
-
-
-            runSummonAnimation(
-
-                character: character,
-
-                arenaAnchor: anchorEntity,
-
-                aura: aura,
-
-                smokeOuter: smokeOuter,
-
-                smokeInner: smokeInner,
-
-                magic: magic
-
-            )
 
         }
 
@@ -1328,6 +1317,15 @@ extension ARViewContainer {
         func prepareBattle(
             with enemy: CardDefinition
         ) {
+            #if DEBUG
+            let loadingStartedAt = CACurrentMediaTime()
+            defer {
+                logLoadingDuration(
+                    "prepareBattle \(enemy.referenceImageName) setup (async load started)",
+                    startedAt: loadingStartedAt
+                )
+            }
+            #endif
             guard isCurrentSession else { return }
             battleAudioGeneration += 1
 
@@ -1353,25 +1351,47 @@ extension ARViewContainer {
 
             interactionLocked = true
 
+            let generation = assetLoadGeneration
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let enemyEntity = await self.makeCharacter(enemy)
 
+                // No enemy from a cancelled summon may enter a new battle.
+                guard self.isCurrentSession,
+                      self.assetLoadGeneration == generation,
+                      self.currentArenaEntity === arenaEntity,
+                      self.currentArenaAnchor === arenaAnchor,
+                      self.currentCharacterEntity === player,
+                      self.state.phase == .enemySummoning else {
+                    self.clearAnimationState(for: enemyEntity)
+                    return
+                }
 
-            guard let enemyEntity =
+                guard let enemyEntity else {
+                    self.interactionLocked = false
+                    self.state.phase = .active
+                    self.state.reportBattlePreparationFailure(.enemyModelUnavailable)
+                    return
+                }
 
-                    makeCharacter(
-
-                        enemy
-
-                    )
-
-            else {
-                interactionLocked = false
-                state.phase = .active
-                state.reportBattlePreparationFailure(.enemyModelUnavailable)
-                return
+                self.finishPrepareBattle(
+                    with: enemy,
+                    enemyEntity: enemyEntity,
+                    arenaEntity: arenaEntity,
+                    arenaAnchor: arenaAnchor,
+                    player: player
+                )
             }
+        }
 
-
-
+        @MainActor
+        private func finishPrepareBattle(
+            with enemy: CardDefinition,
+            enemyEntity: Entity,
+            arenaEntity: AnchorEntity,
+            arenaAnchor: ARAnchor,
+            player: Entity
+        ) {
             var playerTarget =
 
                 player.transform
@@ -2691,6 +2711,7 @@ extension ARViewContainer {
         private func clearCurrentArena() {
 
             battleAudioGeneration += 1
+            assetLoadGeneration += 1
 
             guard let arView else {
 
@@ -4112,12 +4133,20 @@ extension ARViewContainer {
 
 
 
+        // The async initializer accepts an asset base name (without .usdz).
+        private func realityAssetBaseName(_ fileName: String) -> String {
+            fileName.lowercased().hasSuffix(".usdz")
+                ? String(fileName.dropLast(5))
+                : fileName
+        }
+
         // MARK: - Character animations
 
+        @MainActor
         private func loadAnimationResource(
             named fileName: String,
             logFailure: Bool = true
-        ) -> AnimationResource? {
+        ) async -> AnimationResource? {
 
             if let cached =
                 animationResourceCache[fileName] {
@@ -4131,11 +4160,21 @@ extension ARViewContainer {
                 return nil
             }
 
+            #if DEBUG
+            let loadingStartedAt = CACurrentMediaTime()
+            defer {
+                logLoadingDuration(
+                    "animation \(fileName)",
+                    startedAt: loadingStartedAt
+                )
+            }
+            #endif
+
             do {
 
                 let source =
-                    try Entity.load(
-                        named: fileName
+                    try await Entity(
+                        named: realityAssetBaseName(fileName)
                     )
 
                 guard let animation =
@@ -4185,10 +4224,11 @@ extension ARViewContainer {
             }
         }
 
+        @MainActor
         private func loadAnimationResource(
             from source: CharacterAnimationSource,
             animatedModel: Entity
-        ) -> AnimationResource? {
+        ) async -> AnimationResource? {
 
             switch source {
 
@@ -4200,7 +4240,7 @@ extension ARViewContainer {
 
             case .file(let fileName):
 
-                return loadAnimationResource(
+                return await loadAnimationResource(
                     named: fileName
                 )
 
@@ -4211,7 +4251,7 @@ extension ARViewContainer {
                 for fileName in fileNames {
 
                     if let animation =
-                        loadAnimationResource(
+                        await loadAnimationResource(
                             named: fileName,
                             logFailure: false
                         ) {
@@ -4233,83 +4273,134 @@ extension ARViewContainer {
             }
         }
 
+        // Os resultados de AnimationResource nao saem do MainActor.
+        // Tarefas paralelas retornam Void e compartilham apenas este acumulador
+        // isolado no mesmo ator, evitando transferencias non-Sendable.
+        @MainActor
+        private final class AnimationLoadResults {
+            var loaded: [CharacterAnimationKind: AnimationResource] = [:]
+        }
+
+        // Carrega cada grupo sequencialmente, mantendo no maximo tres USDZ
+        // em processamento ao mesmo tempo para limitar pressao de memoria.
+        @MainActor
+        private func loadAnimationLane(
+            kinds: [CharacterAnimationKind],
+            animationSet: CharacterAnimationSet,
+            animatedModel: Entity,
+            results: AnimationLoadResults,
+            expectedLoadGeneration: Int
+        ) async {
+            for kind in kinds {
+                guard isCurrentSession,
+                      assetLoadGeneration == expectedLoadGeneration else {
+                    return
+                }
+                guard let source = animationSet[kind] else { continue }
+                if let resource = await loadAnimationResource(
+                    from: source,
+                    animatedModel: animatedModel
+                ) {
+                    results.loaded[kind] = resource
+                }
+            }
+        }
+
+        @MainActor
         private func registerAnimations(
             for card: CardDefinition,
             character: Entity,
-            animatedModel: Entity
-        ) {
+            animatedModel: Entity,
+            expectedLoadGeneration: Int
+        ) async {
+            guard isCurrentSession,
+                  assetLoadGeneration == expectedLoadGeneration else { return }
 
-            let key =
-                ObjectIdentifier(
-                    character
+            #if DEBUG
+            let loadingStartedAt = CACurrentMediaTime()
+            defer {
+                logLoadingDuration(
+                    "registerAnimations \(card.referenceImageName) total (3 lanes, progressive)",
+                    startedAt: loadingStartedAt
                 )
+            }
+            #endif
 
-            var animations:
-                [
-                    CharacterAnimationKind:
-                        AnimationResource
-                ] = [:]
+            let key = ObjectIdentifier(character)
+            var animations: [CharacterAnimationKind: AnimationResource] = [:]
 
-            if let animationSet =
-                card.animations {
-
-                for kind in
-                    CharacterAnimationKind
-                        .allCases {
-
-                    guard let source =
-                            animationSet[kind]
-                    else {
-                        continue
-                    }
-
-                    if let animation =
-                        loadAnimationResource(
-                            from: source,
-                            animatedModel:
-                                animatedModel
-                        ) {
-
-                        animations[kind] =
-                            animation
-                    }
+            if let animationSet = card.animations {
+                let kinds = CharacterAnimationKind.allCases.filter {
+                    animationSet[$0] != nil
+                }
+                let lane0 = kinds.enumerated().compactMap {
+                    $0.offset % 3 == 0 ? $0.element : nil
+                }
+                let lane1 = kinds.enumerated().compactMap {
+                    $0.offset % 3 == 1 ? $0.element : nil
+                }
+                let lane2 = kinds.enumerated().compactMap {
+                    $0.offset % 3 == 2 ? $0.element : nil
                 }
 
-            } else if let idle =
-                        animatedModel
-                            .availableAnimations
-                            .first {
+                let results = AnimationLoadResults()
+                let generation = expectedLoadGeneration
+                let task0 = Task { @MainActor in
+                    await self.loadAnimationLane(
+                        kinds: lane0,
+                        animationSet: animationSet,
+                        animatedModel: animatedModel,
+                        results: results,
+                        expectedLoadGeneration: generation
+                    )
+                }
+                let task1 = Task { @MainActor in
+                    await self.loadAnimationLane(
+                        kinds: lane1,
+                        animationSet: animationSet,
+                        animatedModel: animatedModel,
+                        results: results,
+                        expectedLoadGeneration: generation
+                    )
+                }
+                let task2 = Task { @MainActor in
+                    await self.loadAnimationLane(
+                        kinds: lane2,
+                        animationSet: animationSet,
+                        animatedModel: animatedModel,
+                        results: results,
+                        expectedLoadGeneration: generation
+                    )
+                }
 
-                animations[.idle] =
-                    idle
+                await task0.value
+                await task1.value
+                await task2.value
+                animations = results.loaded
+            } else if let idle = animatedModel.availableAnimations.first {
+                animations[.idle] = idle
             }
 
-            characterAnimatedModels[key] =
-                animatedModel
-
-            characterAnimations[key] =
-                animations
-
-            if animations[.idle] != nil {
-
-                playCharacterAnimation(
-                    .idle,
-                    on: character
-                )
+            // O modelo já está visível e a animação Idle já está rodando.
+            // Apenas acrescenta os recursos recebidos, sem reiniciar Idle
+            // nem restaurar dados de um personagem removido.
+            guard isCurrentSession,
+                  assetLoadGeneration == expectedLoadGeneration,
+                  characterAnimatedModels[key] === animatedModel,
+                  var existingAnimations = characterAnimations[key] else {
+                return
             }
+            for (kind, animation) in animations {
+                existingAnimations[kind] = animation
+            }
+            characterAnimations[key] = existingAnimations
 
-            let loadedKinds =
-                CharacterAnimationKind
-                    .allCases
-                    .filter {
-                        animations[$0] != nil
-                    }
-
+            let loadedKinds = CharacterAnimationKind.allCases.filter {
+                existingAnimations[$0] != nil
+            }
             print(
                 "🎭 Animações registradas:",
-                card.displayName,
-                "|",
-                loadedKinds
+                card.displayName, "|", loadedKinds
             )
         }
 
@@ -4643,29 +4734,48 @@ extension ARViewContainer {
 
 
 
+        @MainActor
         private func makeCharacter(
 
             _ card: CardDefinition
 
-        ) -> Entity? {
+        ) async -> Entity? {
 
-
+            #if DEBUG
+            let characterStartedAt = CACurrentMediaTime()
+            defer {
+                logLoadingDuration(
+                    "makeCharacter \(card.referenceImageName) model ready (animations pending)",
+                    startedAt: characterStartedAt
+                )
+            }
+            let modelStartedAt = CACurrentMediaTime()
+            #endif
+            // Cancela o resultado se o jogador iniciou outra sessão.
+            let expectedLoadGeneration = assetLoadGeneration
+            guard isCurrentSession else { return nil }
 
             do {
 
-
-
                 let importedModel =
 
-                    try Entity.load(
+                    try await Entity(
 
-                        named:
-
-                            card.modelName
+                        named: realityAssetBaseName(card.modelName)
 
                     )
 
+                #if DEBUG
+                logLoadingDuration(
+                    "model \(card.modelName)",
+                    startedAt: modelStartedAt
+                )
+                #endif
 
+                guard isCurrentSession,
+                      assetLoadGeneration == expectedLoadGeneration else {
+                    return nil
+                }
 
                 let root = Entity()
 
@@ -4707,11 +4817,36 @@ extension ARViewContainer {
                     importedModel.position.y -= 0.30
                 }
 
-                registerAnimations(
-                    for: card,
-                    character: root,
-                    animatedModel: importedModel
-                )
+                // A animação Idle já vem dentro de *_Idle.usdz. Inicie-a
+                // imediatamente para não esperar as outras seis animações
+                // antes de revelar o personagem na RA.
+                let key = ObjectIdentifier(root)
+                characterAnimatedModels[key] = importedModel
+                var initialAnimations: [CharacterAnimationKind: AnimationResource] = [:]
+                if let idle = importedModel.availableAnimations.first {
+                    initialAnimations[.idle] = idle
+                }
+                characterAnimations[key] = initialAnimations
+                if initialAnimations[.idle] != nil {
+                    playCharacterAnimation(.idle, on: root)
+                }
+
+                // Carrega as outras animações durante os próprios efeitos
+                // de invocação. A conclusão só atualiza uma sessão ativa.
+                Task { @MainActor [weak self, weak root] in
+                    guard let self, let root,
+                          self.isCurrentSession,
+                          self.assetLoadGeneration == expectedLoadGeneration,
+                          self.characterAnimatedModels[ObjectIdentifier(root)] === importedModel else {
+                        return
+                    }
+                    await self.registerAnimations(
+                        for: card,
+                        character: root,
+                        animatedModel: importedModel,
+                        expectedLoadGeneration: expectedLoadGeneration
+                    )
+                }
 
                 return root
 
@@ -4719,7 +4854,12 @@ extension ARViewContainer {
 
             } catch {
 
-
+                #if DEBUG
+                logLoadingDuration(
+                    "model \(card.modelName) FAILED",
+                    startedAt: modelStartedAt
+                )
+                #endif
 
                 print(
 
