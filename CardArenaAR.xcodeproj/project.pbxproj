@@ -361,8 +361,8 @@
 				INFOPLIST_FILE = "CardArenaAR-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = DeckSpawn;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.card-games";
-				INFOPLIST_KEY_NSCameraUsageDescription = com.victorhasse.CardArenaAR;
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "O CardArenaAR usa a rede local para encontrar e conectar partidas multiplayer próximas.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "O DeckSpawn usa a câmera para reconhecer cartas físicas e mostrar personagens em realidade aumentada durante as batalhas.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "O DeckSpawn usa a rede local para encontrar e conectar jogadores em partidas multiplayer próximas.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -406,8 +406,8 @@
 				INFOPLIST_FILE = "CardArenaAR-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = DeckSpawn;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.card-games";
-				INFOPLIST_KEY_NSCameraUsageDescription = com.victorhasse.CardArenaAR;
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "O CardArenaAR usa a rede local para encontrar e conectar partidas multiplayer próximas.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "O DeckSpawn usa a câmera para reconhecer cartas físicas e mostrar personagens em realidade aumentada durante as batalhas.";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "O DeckSpawn usa a rede local para encontrar e conectar jogadores em partidas multiplayer próximas.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

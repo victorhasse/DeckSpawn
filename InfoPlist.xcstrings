@@ -1,0 +1,40 @@
+{
+  "sourceLanguage": "pt-BR",
+  "strings": {
+    "NSCameraUsageDescription": {
+      "comment": "Explains why DeckSpawn needs camera access for AR card scanning.",
+      "localizations": {
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O DeckSpawn usa a câmera para reconhecer cartas físicas e mostrar personagens em realidade aumentada durante as batalhas."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeckSpawn uses the camera to recognize physical cards and display characters in augmented reality during battles."
+          }
+        }
+      }
+    },
+    "NSLocalNetworkUsageDescription": {
+      "comment": "Explains why DeckSpawn uses the local network for nearby multiplayer matches.",
+      "localizations": {
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O DeckSpawn usa a rede local para encontrar e conectar jogadores em partidas multiplayer próximas."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeckSpawn uses the local network to discover and connect players for nearby multiplayer matches."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
