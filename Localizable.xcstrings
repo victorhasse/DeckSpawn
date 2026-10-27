@@ -130,6 +130,16 @@
         }
       }
     },
+    "A batalha será encerrada e você voltará ao menu principal." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The battle will end and you will return to the main menu."
+          }
+        }
+      }
+    },
     "A batalha vai começar" : {
       "localizations" : {
         "en" : {
@@ -573,6 +583,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Meet the available characters"
+          }
+        }
+      }
+    },
+    "Continuar jogando" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep playing"
           }
         }
       }
@@ -1760,6 +1780,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ROUND %lld"
+          }
+        }
+      }
+    },
+    "SAIR" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "LEAVE"
+          }
+        }
+      }
+    },
+    "Sair da batalha" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave battle"
+          }
+        }
+      }
+    },
+    "Sair da batalha?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leave the battle?"
           }
         }
       }

@@ -16,6 +16,8 @@ struct SinglePlayerView: View {
 
     private var showingSettings = false
 
+    @State private var showingExitConfirmation = false
+
     @State private var showingEnemyPreparationError = false
     @State private var enemyPreparationErrorMessage = ""
 
@@ -203,75 +205,73 @@ struct SinglePlayerView: View {
 
     }
 
+    // A partida só exige confirmação após o jogador confirmar sua carta.
+    // Terminada a batalha, o retorno ao menu continua direto.
+    private var isBattleInProgress: Bool {
+        switch gameFlow.singlePlayerPhase {
+        case .choosingCard:
+            return false
+        case .summoningEnemy:
+            return true
+        case .battleReady:
+            return gameFlow.battleState?.winner == nil
+        }
+    }
+
+    private func requestExit() {
+        if isBattleInProgress {
+            showingExitConfirmation = true
+        } else {
+            onExit()
+        }
+    }
+
     private var topControls: some View {
 
         VStack {
 
             HStack {
 
-                Button(
-
-                    action: onExit
-
-                ) {
-
-                    Image(
-
-                        systemName:
-
-                            "chevron.left"
-
-                    )
-
-                    .font(
-
-                        .system(
-
-                            size: 18,
-
-                            weight: .bold
-
+                Button(action: requestExit) {
+                    HStack(spacing: 7) {
+                        Image(systemName: isBattleInProgress
+                            ? "rectangle.portrait.and.arrow.right"
+                            : "chevron.left"
                         )
+                        .font(.system(size: 18, weight: .bold))
 
-                    )
-
-                    .foregroundStyle(
-
-                        .white
-
-                    )
-
-                    .frame(
-
-                        width: 44,
-
-                        height: 44
-
-                    )
-
-                    .background(
-
-                        Color.black.opacity(
-
-                            0.62
-
-                        )
-
-                    )
-
-                    .clipShape(
-
-                        Circle()
-
-                    )
-
+                        if isBattleInProgress {
+                            Text("SAIR")
+                                .font(.system(size: 12, weight: .bold))
+                        }
+                    }
+                    .foregroundStyle(.white)
+                    .frame(height: 44)
+                    .padding(.horizontal, isBattleInProgress ? 14 : 0)
+                    .frame(minWidth: 44)
+                    .background(Color.black.opacity(0.62), in: Capsule())
+                    .overlay {
+                        Capsule()
+                            .strokeBorder(
+                                isBattleInProgress
+                                    ? Color.red.opacity(0.65)
+                                    : Color.white.opacity(0.14),
+                                lineWidth: 1
+                            )
+                    }
                 }
-
+                .buttonStyle(.plain)
                 .accessibilityLabel(
-
-                    "Voltar ao menu"
-
+                    isBattleInProgress ? Text("Sair da batalha") : Text("Voltar ao menu")
                 )
+                .alert("Sair da batalha?", isPresented: $showingExitConfirmation) {
+                    Button("Continuar jogando", role: .cancel) { }
+                    Button("Sair da batalha", role: .destructive) {
+                        onExit()
+                    }
+                } message: {
+                    Text("A batalha será encerrada e você voltará ao menu principal.")
+                }
 
                 Spacer()
 
