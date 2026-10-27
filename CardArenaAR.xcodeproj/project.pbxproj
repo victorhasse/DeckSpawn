@@ -11,10 +11,21 @@
 		D6077FC830801275000078B3 /* DeckSpawnL10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6077FC730801275000078B3 /* DeckSpawnL10n.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		D6B9E9C1309139BB00945CFD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 000000000000000100000000;
+			remoteInfo = CardArenaAR;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* CardArenaAR.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CardArenaAR.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D6077FC5307FF80B000078B3 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		D6077FC730801275000078B3 /* DeckSpawnL10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeckSpawnL10n.swift; sourceTree = "<group>"; };
+		D6B9E9BD309139BB00945CFD /* CardArenaARTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CardArenaARTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D6FC534E307447CB0009DAE3 /* CardArenaAR-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "CardArenaAR-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -39,10 +50,20 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		D6B9E9BE309139BB00945CFD /* CardArenaARTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = CardArenaARTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		000000000000000130000000 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+			);
+		};
+		D6B9E9BA309139BB00945CFD /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
 			);
@@ -61,6 +82,8 @@
 				D6752F5C30702FF0001A9871 /* Services */,
 				D6752F5730702F88001A9871 /* Features */,
 				000000000000000000000120 /* CardArenaAR.app */,
+				D6B9E9BD309139BB00945CFD /* CardArenaARTests.xctest */,
+				D6B9E9BE309139BB00945CFD /* CardArenaARTests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -88,6 +111,27 @@
 			productReference = 000000000000000000000120 /* CardArenaAR.app */;
 			productType = "com.apple.product-type.application";
 		};
+		D6B9E9BC309139BB00945CFD /* CardArenaARTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D6B9E9C3309139BB00945CFD /* Build configuration list for PBXNativeTarget "CardArenaARTests" */;
+			buildPhases = (
+				D6B9E9B9309139BB00945CFD /* Sources */,
+				D6B9E9BA309139BB00945CFD /* Frameworks */,
+				D6B9E9BB309139BB00945CFD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D6B9E9C2309139BB00945CFD /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				D6B9E9BE309139BB00945CFD /* CardArenaARTests */,
+			);
+			name = CardArenaARTests;
+			productName = CardArenaARTests;
+			productReference = D6B9E9BD309139BB00945CFD /* CardArenaARTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -95,11 +139,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2630;
+				LastSwiftUpdateCheck = 2710;
 				LastUpgradeCheck = 2710;
 				TargetAttributes = {
 					000000000000000100000000 = {
 						CreatedOnToolsVersion = 26.3;
+					};
+					D6B9E9BC309139BB00945CFD = {
+						CreatedOnToolsVersion = 27.1;
+						TestTargetID = 000000000000000100000000;
 					};
 				};
 			};
@@ -119,6 +167,7 @@
 			projectRoot = "";
 			targets = (
 				000000000000000100000000 /* CardArenaAR */,
+				D6B9E9BC309139BB00945CFD /* CardArenaARTests */,
 			);
 		};
 /* End PBXProject section */
@@ -130,6 +179,11 @@
 				D6077FC6307FF80B000078B3 /* Localizable.xcstrings in Resources */,
 			);
 		};
+		D6B9E9BB309139BB00945CFD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -139,7 +193,20 @@
 				D6077FC830801275000078B3 /* DeckSpawnL10n.swift in Sources */,
 			);
 		};
+		D6B9E9B9309139BB00945CFD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D6B9E9C2309139BB00945CFD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 000000000000000100000000 /* CardArenaAR */;
+			targetProxy = D6B9E9C1309139BB00945CFD /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		000000000000000011000000 /* Debug configuration for PBXProject "CardArenaAR" */ = {
@@ -370,6 +437,51 @@
 			};
 			name = Release;
 		};
+		D6B9E9C4309139BB00945CFD /* Debug configuration for PBXNativeTarget "CardArenaARTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3FH9JF2ZBB;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.victorhasse.CardArenaARTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CardArenaAR.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CardArenaAR";
+			};
+			name = Debug;
+		};
+		D6B9E9C5309139BB00945CFD /* Release configuration for PBXNativeTarget "CardArenaARTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3FH9JF2ZBB;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.victorhasse.CardArenaARTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CardArenaAR.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CardArenaAR";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -386,6 +498,14 @@
 			buildConfigurations = (
 				000000000000000111000000 /* Debug configuration for PBXNativeTarget "CardArenaAR" */,
 				000000000000000112000000 /* Release configuration for PBXNativeTarget "CardArenaAR" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		D6B9E9C3309139BB00945CFD /* Build configuration list for PBXNativeTarget "CardArenaARTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D6B9E9C4309139BB00945CFD /* Debug configuration for PBXNativeTarget "CardArenaARTests" */,
+				D6B9E9C5309139BB00945CFD /* Release configuration for PBXNativeTarget "CardArenaARTests" */,
 			);
 			defaultConfigurationName = Release;
 		};
