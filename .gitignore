@@ -30,6 +30,10 @@ DerivedData/
 # Sound effects and music
 /Resources/Audio/
 
+# Local-only character portraits for the Collection screen.
+# Keep third-party / private artwork out of the public GitHub repository.
+/Resources/Assets.xcassets/Collection_*.imageset/
+
 # AR reference images (character cards)
 /Resources/Assets.xcassets/AR Resources.arresourcegroup/
 

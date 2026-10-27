@@ -9,6 +9,8 @@ struct CardDefinition: Identifiable, Hashable {
     let referenceImageName: String
     let displayName: String
     let modelName: String
+    /// Texto exibido na Coleção; traduzido pelo catálogo Localizable.xcstrings.
+    let collectionDescription: String
 
     let modelHeight: Float
     let yawOffset: Float
@@ -22,6 +24,7 @@ struct CardDefinition: Identifiable, Hashable {
         referenceImageName: String,
         displayName: String,
         modelName: String,
+        collectionDescription: String = "",
         modelHeight: Float,
         yawOffset: Float,
         maxHP: Int,
@@ -32,6 +35,7 @@ struct CardDefinition: Identifiable, Hashable {
         self.referenceImageName = referenceImageName
         self.displayName = displayName
         self.modelName = modelName
+        self.collectionDescription = collectionDescription
         self.modelHeight = modelHeight
         self.yawOffset = yawOffset
         self.maxHP = maxHP

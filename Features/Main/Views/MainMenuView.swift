@@ -10,6 +10,8 @@ struct MainMenuView: View {
 
     @State private var showingSettings = false
 
+    @State private var showingCollection = false
+
     private let cyan = Color(red: 0.20, green: 0.84, blue: 1.00)
 
     private let violet = Color(red: 0.56, green: 0.39, blue: 1.00)
@@ -49,6 +51,12 @@ struct MainMenuView: View {
                 }
 
             }
+
+        }
+
+        .fullScreenCover(isPresented: $showingCollection) {
+
+            CharacterCollectionView()
 
         }
 
@@ -117,6 +125,20 @@ struct MainMenuView: View {
                 accent: violet,
 
                 action: onMultiplayer
+
+            )
+
+            menuButton(
+
+                title: "COLEÇÃO",
+
+                subtitle: "Conheça os personagens disponíveis",
+
+                icon: "square.grid.2x2.fill",
+
+                accent: cyan,
+
+                action: { showingCollection = true }
 
             )
 
