@@ -25,6 +25,7 @@ final class GameFlowState: ObservableObject {
     @Published var lastTurnMessage: String?
 
     @Published var battleCountdown: Int?
+    @Published private(set) var isShowingVersus = false
     @Published var isBattleStarted = false
     @Published var turnSecondsRemaining = BattleRules.turnDurationSeconds
 
@@ -34,6 +35,9 @@ final class GameFlowState: ObservableObject {
     private var turnGeneration = 0
     // Invalida resoluções atrasadas quando a batalha ou a tela muda.
     private var battleGeneration = 0
+    // The VS intro must never outlive its battle.
+    private var versusGeneration = 0
+    private let versusDuration: TimeInterval = 2.5
 
     func startSinglePlayer() {
         resetBattleClocks()
@@ -43,6 +47,7 @@ final class GameFlowState: ObservableObject {
         lastTurnMessage = nil
         isResolvingTurn = false
         battleCountdown = nil
+        isShowingVersus = false
         isBattleStarted = false
         turnSecondsRemaining = BattleRules.turnDurationSeconds
         singlePlayerPhase = .choosingCard
@@ -62,6 +67,7 @@ final class GameFlowState: ObservableObject {
         lastTurnMessage = nil
         isResolvingTurn = false
         battleCountdown = nil
+        isShowingVersus = false
         isBattleStarted = false
         turnSecondsRemaining = BattleRules.turnDurationSeconds
         singlePlayerPhase = .choosingCard
@@ -78,6 +84,7 @@ final class GameFlowState: ObservableObject {
         lastTurnMessage = nil
         isResolvingTurn = false
         battleCountdown = nil
+        isShowingVersus = false
         isBattleStarted = false
         singlePlayerPhase = .summoningEnemy
         return enemy
@@ -93,6 +100,7 @@ final class GameFlowState: ObservableObject {
         lastTurnMessage = nil
         isResolvingTurn = false
         battleCountdown = nil
+        isShowingVersus = false
         isBattleStarted = false
         turnSecondsRemaining = BattleRules.turnDurationSeconds
         singlePlayerPhase = .choosingCard
@@ -102,7 +110,27 @@ final class GameFlowState: ObservableObject {
         guard let playerCard, let enemyCard else { return }
         battleState = BattleState.newBattle(player: playerCard, enemy: enemyCard)
         singlePlayerPhase = .battleReady
-        startBattleCountdown()
+        startVersusIntro()
+    }
+
+    private func startVersusIntro() {
+        guard screen == .singlePlayer, battleState != nil else { return }
+        versusGeneration += 1
+        let generation = versusGeneration
+        isShowingVersus = true
+        isBattleStarted = false
+        battleCountdown = nil
+        lastTurnMessage = nil
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + versusDuration) { [weak self] in
+            guard let self,
+                  self.versusGeneration == generation,
+                  self.screen == .singlePlayer,
+                  self.singlePlayerPhase == .battleReady,
+                  self.battleState != nil else { return }
+            self.isShowingVersus = false
+            self.startBattleCountdown()
+        }
     }
 
     func playTurn(playerMove: BattleMove) {
@@ -241,6 +269,8 @@ final class GameFlowState: ObservableObject {
     }
 
     private func resetBattleClocks() {
+        versusGeneration += 1
+        isShowingVersus = false
         countdownGeneration += 1
         turnGeneration += 1
         battleGeneration += 1

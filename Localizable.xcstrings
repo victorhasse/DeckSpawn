@@ -130,6 +130,22 @@
         }
       }
     },
+    "A batalha vai começar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The battle is about to begin"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A batalha vai começar"
+          }
+        }
+      }
+    },
     "A sala enviou uma resposta inválida." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -562,7 +578,6 @@
       }
     },
     "CPU" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -623,14 +638,7 @@
       }
     },
     "DECKSPAWN" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "DECKSPAWN"
-          }
-        }
-      }
+
     },
     "DERROTA" : {
       "extractionState" : "stale",
@@ -2009,7 +2017,6 @@
       }
     },
     "VOCÊ" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

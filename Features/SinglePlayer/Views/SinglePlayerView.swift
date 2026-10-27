@@ -176,13 +176,20 @@ struct SinglePlayerView: View {
 
         case .battleReady:
 
-            BattleHUDOverlay(
+            ZStack {
+                BattleHUDOverlay(
+                    gameFlow: gameFlow,
+                    onExit: onExit
+                )
 
-                gameFlow: gameFlow,
-
-                onExit: onExit
-
-            )
+                if gameFlow.isShowingVersus,
+                   let player = gameFlow.playerCard,
+                   let opponent = gameFlow.enemyCard {
+                    BattleVersusOverlay(player: player, opponent: opponent)
+                        .transition(.opacity)
+                        .zIndex(2)
+                }
+            }
 
         
         default:
