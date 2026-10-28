@@ -1048,9 +1048,19 @@ private struct FighterHPCard: View {
     let progress: Double
     let isTrailing: Bool
 
+    // These are presentation values only. BattleState remains the source of truth.
+    // The trailing (amber) bar briefly shows the amount of HP just lost.
+    @State private var visibleProgress = 1.0
+    @State private var trailingProgress = 1.0
+    @State private var previousHP: Int?
+
     private var accent: Color { isTrailing ? BattleTheme.violet : BattleTheme.cyan }
     private var healthColor: Color {
         progress <= 0.25 ? .red : (progress <= 0.50 ? .orange : accent)
+    }
+    private var normalizedProgress: Double {
+        guard progress.isFinite else { return 0 }
+        return min(max(progress, 0), 1)
     }
 
     var body: some View {
@@ -1073,10 +1083,19 @@ private struct FighterHPCard: View {
             GeometryReader { geo in
                 ZStack(alignment: isTrailing ? .trailing : .leading) {
                     Capsule().fill(Color.white.opacity(0.12))
+
+                    // Briefly retain the previous HP in amber to emphasize damage.
                     Capsule()
-                        .fill(LinearGradient(colors: [healthColor.opacity(0.65), healthColor], startPoint: .leading, endPoint: .trailing))
-                        .frame(width: geo.size.width * min(max(progress, 0), 1))
-                        .animation(.easeOut(duration: 0.45), value: progress)
+                        .fill(Color(red: 1.0, green: 0.67, blue: 0.31).opacity(0.85))
+                        .frame(width: geo.size.width * trailingProgress)
+
+                    Capsule()
+                        .fill(LinearGradient(
+                            colors: [healthColor.opacity(0.65), healthColor],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ))
+                        .frame(width: geo.size.width * visibleProgress)
                 }
             }
             .frame(height: 7)
@@ -1095,6 +1114,45 @@ private struct FighterHPCard: View {
                 .stroke(accent.opacity(0.46), lineWidth: 1)
         }
         .shadow(color: accent.opacity(0.10), radius: 9)
+        .task(id: currentHP) {
+            // SwiftUI cancels an older task when HP changes again or this card
+            // disappears, preventing delayed animations from a prior battle.
+            let target = normalizedProgress
+            guard let oldHP = previousHP else {
+                previousHP = currentHP
+                snapHPBar(to: target)
+                return
+            }
+            previousHP = currentHP
+
+            // Recovery/rematch: refill instantly, with no stale amber segment.
+            guard currentHP < oldHP else {
+                snapHPBar(to: target)
+                return
+            }
+
+            withAnimation(.easeOut(duration: 0.40)) {
+                visibleProgress = target
+            }
+            do {
+                try await Task.sleep(nanoseconds: 240_000_000)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.52)) {
+                trailingProgress = target
+            }
+        }
+    }
+
+    private func snapHPBar(to value: Double) {
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            visibleProgress = value
+            trailingProgress = value
+        }
     }
 }
 
