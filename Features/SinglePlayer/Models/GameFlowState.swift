@@ -3,6 +3,7 @@ import Combine
 
 enum AppScreen {
     case mainMenu
+    case singlePlayerSetup
     case singlePlayer
     case multiplayer
 }
@@ -17,6 +18,30 @@ enum SinglePlayerPhase {
 final class GameFlowState: ObservableObject {
     @Published var screen: AppScreen = .mainMenu
     @Published var singlePlayerPhase: SinglePlayerPhase = .choosingCard
+    @Published private(set) var selectedDifficulty: AIDifficulty
+
+    private let preferences: UserDefaults
+    private var cpuAI = SinglePlayerAI()
+    // The move is selected at the START of each round, before player input.
+    private(set) var committedCPUMove: BattleMove?
+
+    init(preferences: UserDefaults = .standard) {
+        self.preferences = preferences
+        self.selectedDifficulty = AIDifficulty(
+            rawValue: preferences.string(forKey: AIDifficulty.preferenceKey) ?? ""
+        ) ?? .normal
+    }
+
+    func openSinglePlayerSetup() {
+        resetBattleClocks()
+        screen = .singlePlayerSetup
+    }
+
+    func startSinglePlayer(difficulty: AIDifficulty) {
+        selectedDifficulty = difficulty
+        preferences.set(difficulty.rawValue, forKey: AIDifficulty.preferenceKey)
+        startSinglePlayer()
+    }
 
     @Published var playerCard: CardDefinition?
     @Published var enemyCard: CardDefinition?
@@ -164,7 +189,10 @@ final class GameFlowState: ObservableObject {
               let battleState,
               battleState.winner == nil else { return }
 
-        guard let enemyMove = BattleMove.allCases.randomElement() else { return }
+        // Precommitted at the beginning of the round: the CPU never sees
+        // the player's current choice before deciding its own.
+        guard let enemyMove = committedCPUMove else { return }
+        committedCPUMove = nil
 
         turnGeneration += 1
         isResolvingTurn = true
@@ -182,7 +210,7 @@ final class GameFlowState: ObservableObject {
             )
         } else {
             lastTurnMessage = DeckSpawnL10n.format(
-                "Você escolheu %@. CPU está escolhendo...",
+                "Você escolheu %@. Revelando ações...",
                 playerMove.displayName
             )
         }
@@ -198,6 +226,8 @@ final class GameFlowState: ObservableObject {
             )
             self.battleState = resolution.state
             self.lastTurnMessage = resolution.message
+            // Update the predictor only after the round actually finishes.
+            self.cpuAI.recordCompletedPlayerMove(playerMove)
 
             if let roundResult = resolution.state.lastRoundResult {
                 GameHaptics.roundResult(roundResult, winner: resolution.state.winner)
@@ -264,6 +294,8 @@ final class GameFlowState: ObservableObject {
         turnGeneration += 1
         let generation = turnGeneration
         turnSecondsRemaining = BattleRules.turnDurationSeconds
+        // Commit before enabling the next player action / timeout timer.
+        committedCPUMove = cpuAI.chooseMove(difficulty: selectedDifficulty)
         runTurnTimer(remaining: BattleRules.turnDurationSeconds, generation: generation)
     }
 
@@ -295,5 +327,7 @@ final class GameFlowState: ObservableObject {
         countdownGeneration += 1
         turnGeneration += 1
         battleGeneration += 1
+        cpuAI.reset()
+        committedCPUMove = nil
     }
 }

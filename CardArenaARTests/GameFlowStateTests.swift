@@ -156,4 +156,55 @@ final class GameFlowStateTests: XCTestCase {
         XCTAssertNil(flow.battleCountdown)
         XCTAssertFalse(flow.isBattleStarted)
     }
+    @MainActor
+    func testDifficultySetupAndSelectionAreAppliedBeforeCardScan() {
+        let key = AIDifficulty.preferenceKey
+        let defaults = UserDefaults(suiteName: "DeckSpawnAITests.flow")!
+        defaults.removePersistentDomain(forName: "DeckSpawnAITests.flow")
+        defer { defaults.removePersistentDomain(forName: "DeckSpawnAITests.flow") }
+        let flow = GameFlowState(preferences: defaults)
+        XCTAssertEqual(flow.selectedDifficulty, .normal)
+        flow.openSinglePlayerSetup()
+        XCTAssertEqual(flow.screen, .singlePlayerSetup)
+        XCTAssertNil(flow.playerCard)
+        flow.startSinglePlayer(difficulty: .hard)
+        XCTAssertEqual(flow.selectedDifficulty, .hard)
+        XCTAssertEqual(defaults.string(forKey: key), AIDifficulty.hard.rawValue)
+        XCTAssertEqual(flow.screen, .singlePlayer)
+        XCTAssertEqual(flow.singlePlayerPhase, .choosingCard)
+        flow.returnToMainMenu()
+        XCTAssertEqual(flow.selectedDifficulty, .hard)
+        XCTAssertEqual(GameFlowState(preferences: defaults).selectedDifficulty, .hard)
+    }
+
+    @MainActor
+    func testLeavingDifficultySetupReturnsToMenuWithoutBattle() {
+        let flow = GameFlowState()
+        flow.openSinglePlayerSetup()
+        flow.returnToMainMenu()
+        XCTAssertEqual(flow.screen, .mainMenu)
+        XCTAssertNil(flow.battleState)
+    }
+
+    @MainActor
+    func testAIHistoryIsResetForNewBattleAndRematchKeepsDifficulty() throws {
+        let defaults = UserDefaults(suiteName: "DeckSpawnAITests.rematch")!
+        defaults.removePersistentDomain(forName: "DeckSpawnAITests.rematch")
+        defer { defaults.removePersistentDomain(forName: "DeckSpawnAITests.rematch") }
+        let flow = GameFlowState(preferences: defaults)
+        flow.startSinglePlayer(difficulty: .hard)
+        let player = try XCTUnwrap(CardDatabase.all.first)
+        XCTAssertNotNil(flow.confirmPlayerCard(player))
+        flow.enemySummonDidFinish()
+        var finished = try XCTUnwrap(flow.battleState)
+        finished.winner = .player
+        finished.enemyHP = 0
+        flow.battleState = finished
+        XCTAssertTrue(flow.restartBattleWithSameCharacters())
+        XCTAssertEqual(flow.selectedDifficulty, .hard)
+        XCTAssertNil(flow.committedCPUMove)
+        flow.returnToMainMenu()
+        XCTAssertNil(flow.committedCPUMove)
+    }
+
 }

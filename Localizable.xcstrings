@@ -166,6 +166,16 @@
         }
       }
     },
+    "A CPU observa seus movimentos anteriores." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The CPU learns from your previous moves."
+          }
+        }
+      }
+    },
     "A sala enviou uma resposta inválida." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -577,6 +587,16 @@
         }
       }
     },
+    "Configure a dificuldade da CPU" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set the CPU difficulty"
+          }
+        }
+      }
+    },
     "Configure sua sala" : {
       "localizations" : {
         "en" : {
@@ -603,6 +623,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Keep playing"
+          }
+        }
+      }
+    },
+    "CONTINUAR PARA O SCANNER" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CONTINUE TO SCANNER"
           }
         }
       }
@@ -687,6 +717,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "CHARACTER DETAILS"
+          }
+        }
+      }
+    },
+    "DIFÍCIL" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HARD"
           }
         }
       }
@@ -817,6 +857,16 @@
         }
       }
     },
+    "ESCOLHA A DIFICULDADE" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CHOOSE DIFFICULTY"
+          }
+        }
+      }
+    },
     "ESCOLHA SEU PERSONAGEM" : {
       "localizations" : {
         "en" : {
@@ -880,6 +930,16 @@
         }
       }
     },
+    "Escolhas aleatórias, como no jogo original." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Random moves, just like the original game."
+          }
+        }
+      }
+    },
     "Escolhendo..." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -927,6 +987,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "DELETE ROOM"
+          }
+        }
+      }
+    },
+    "FÁCIL" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EASY"
           }
         }
       }
@@ -1342,6 +1412,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ROOM NAME"
+          }
+        }
+      }
+    },
+    "NORMAL" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "NORMAL"
           }
         }
       }
@@ -2074,6 +2154,16 @@
         }
       }
     },
+    "Uma CPU mais previsível para aprender a jogar." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A more predictable CPU to help you learn."
+          }
+        }
+      }
+    },
     "Veja partidas disponíveis" : {
       "localizations" : {
         "en" : {
@@ -2164,6 +2254,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "You chose %@. CPU is choosing..."
+          }
+        }
+      }
+    },
+    "Você escolheu %@. Revelando ações..." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You chose %@. Revealing moves..."
           }
         }
       }

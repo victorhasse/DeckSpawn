@@ -21,13 +21,23 @@ struct ContentView: View {
             MainMenuView(
                 arState: arState,
                 onSinglePlayer: {
-                    arState.resetForNewSession()
-                    gameFlow.startSinglePlayer()
+                    gameFlow.openSinglePlayerSetup()
                 },
                 onMultiplayer: {
                     arState.resetForNewSession()
                     multiplayerService.stopAll()
                     gameFlow.startMultiplayer()
+                }
+            )
+
+        case .singlePlayerSetup:
+
+            SinglePlayerDifficultyView(
+                selectedDifficulty: gameFlow.selectedDifficulty,
+                onBack: { gameFlow.returnToMainMenu() },
+                onContinue: { difficulty in
+                    arState.resetForNewSession()
+                    gameFlow.startSinglePlayer(difficulty: difficulty)
                 }
             )
 
