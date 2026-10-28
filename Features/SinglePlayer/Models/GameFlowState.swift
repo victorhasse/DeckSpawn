@@ -113,6 +113,27 @@ final class GameFlowState: ObservableObject {
         startVersusIntro()
     }
 
+    /// Starts a new duel using the same cards and the existing AR scene.
+    /// The caller must first verify/reset the RealityKit scene with GameARState.
+    @discardableResult
+    func restartBattleWithSameCharacters() -> Bool {
+        guard screen == .singlePlayer,
+              singlePlayerPhase == .battleReady,
+              battleState?.winner != nil,
+              let playerCard, let enemyCard else { return false }
+
+        // Invalidate delayed turn results, countdowns and old VS callbacks.
+        resetBattleClocks()
+        battleState = BattleState.newBattle(player: playerCard, enemy: enemyCard)
+        lastTurnMessage = nil
+        isResolvingTurn = false
+        isBattleStarted = false
+        battleCountdown = nil
+        turnSecondsRemaining = BattleRules.turnDurationSeconds
+        startVersusIntro()
+        return true
+    }
+
     private func startVersusIntro() {
         guard screen == .singlePlayer, battleState != nil else { return }
         versusGeneration += 1

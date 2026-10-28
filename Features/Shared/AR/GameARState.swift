@@ -78,6 +78,7 @@ final class GameARState: ObservableObject {
         activeARCoordinatorID = nil
         onRemoveCharacter = nil
         onPrepareBattle = nil
+        onPrepareRematch = nil
         onBattleTurnAnimation = nil
     }
 
@@ -86,6 +87,9 @@ final class GameARState: ObservableObject {
 
     var onRemoveCharacter: (() -> Void)?
     var onPrepareBattle: ((CardDefinition) -> Void)?
+    /// Reset the existing AR combatants to Idle without scanning/loading again.
+    /// Returns false if the scene or tracking can no longer be reused.
+    var onPrepareRematch: (() -> Bool)?
 
     var onBattleTurnAnimation:
         ((
@@ -141,6 +145,19 @@ final class GameARState: ObservableObject {
         onPrepareBattle(enemy)
     }
 
+    /// Called only after a finished duel and before resetting the battle model.
+    /// A failed preparation leaves the finished battle intact.
+    @discardableResult
+    func prepareRematch() -> Bool {
+        guard phase == .battleReady,
+              let onPrepareRematch,
+              onPrepareRematch() else { return false }
+        // Stop the previous victory/defeat sound and permit the next result.
+        SoundManager.shared.stopBattleResult()
+        finalBattleAudioHandled = false
+        return true
+    }
+
     /// Recebe o resultado FINAL, ja convertido para a perspectiva do iPhone local.
     /// Para multiplayer, calcule `didWin` comparando o ID do vencedor com o ID local.
     /// Chame na thread principal, como as demais atualizacoes de estado de SwiftUI.
@@ -193,6 +210,7 @@ final class GameARState: ObservableObject {
         battlePreparationFailureEvent = nil
         onRemoveCharacter = nil
         onPrepareBattle = nil
+        onPrepareRematch = nil
         onBattleTurnAnimation = nil
     }
 }

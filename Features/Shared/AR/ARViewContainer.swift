@@ -72,6 +72,10 @@ struct ARViewContainer: UIViewRepresentable {
 
         }
 
+        state.onPrepareRematch = { [weak coordinator = context.coordinator] in
+            coordinator?.prepareSameCharacterRematch() ?? false
+        }
+
 
 
         state.onBattleTurnAnimation = {
@@ -1313,6 +1317,32 @@ extension ARViewContainer {
         }
 
 
+
+        /// Reuses the two RealityKit entities after a finished singleplayer duel.
+        /// No AR session restart and no USDZ reload are performed here.
+        func prepareSameCharacterRematch() -> Bool {
+            guard isCurrentSession,
+                  state.phase == .battleReady,
+                  let arView,
+                  let arena = currentArenaEntity,
+                  currentArenaAnchor != nil,
+                  arena.isAnchored,
+                  let player = currentCharacterEntity,
+                  let enemy = currentEnemyEntity,
+                  player.parent != nil,
+                  enemy.parent != nil,
+                  let frame = arView.session.currentFrame,
+                  case .normal = frame.camera.trackingState else {
+                return false
+            }
+
+            // A final hit/death may be scheduled for later. Prevent it from
+            // overriding the new duel's idle animations.
+            battleAudioGeneration += 1
+            _ = playCharacterAnimation(.idle, on: player)
+            _ = playCharacterAnimation(.idle, on: enemy)
+            return true
+        }
 
         func prepareBattle(
             with enemy: CardDefinition

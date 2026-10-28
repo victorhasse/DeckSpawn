@@ -17,6 +17,7 @@ struct SinglePlayerView: View {
     private var showingSettings = false
 
     @State private var showingExitConfirmation = false
+    @State private var showingRematchUnavailable = false
 
     @State private var showingEnemyPreparationError = false
     @State private var enemyPreparationErrorMessage = ""
@@ -181,7 +182,8 @@ struct SinglePlayerView: View {
             ZStack {
                 BattleHUDOverlay(
                     gameFlow: gameFlow,
-                    onExit: onExit
+                    onExit: onExit,
+                    onRematch: beginRematch
                 )
 
                 if gameFlow.isShowingVersus,
@@ -358,6 +360,12 @@ struct SinglePlayerView: View {
             16
 
         )
+        .alert("Realidade aumentada indisponível", isPresented: $showingRematchUnavailable) {
+            Button("Tentar novamente", role: .cancel) { }
+            Button("Voltar ao menu") { onExit() }
+        } message: {
+            Text("A câmera perdeu o rastreamento ou a arena não está disponível. Aponte para a área da batalha e tente novamente, ou volte ao menu para escanear a carta.")
+        }
 
     }
 
@@ -387,6 +395,16 @@ struct SinglePlayerView: View {
 
         }
 
+    }
+
+    private func beginRematch() {
+        guard gameFlow.battleState?.winner != nil else { return }
+        guard arState.prepareRematch() else {
+            // Let the player retry once tracking recovers, or return to menu.
+            showingRematchUnavailable = true
+            return
+        }
+        _ = gameFlow.restartBattleWithSameCharacters()
     }
 
     private func confirmPlayerCard() {
@@ -835,6 +853,7 @@ private enum BattleTheme {
 private struct BattleHUDOverlay: View {
     @ObservedObject var gameFlow: GameFlowState
     let onExit: () -> Void
+    let onRematch: () -> Void
 
     var body: some View {
         ZStack {
@@ -871,7 +890,10 @@ private struct BattleHUDOverlay: View {
                             winner: winner,
                             playerName: battle.playerCard.displayName,
                             enemyName: battle.enemyCard.displayName,
-                            onExit: onExit
+                            rounds: battle.round,
+                            remainingHP: battle.playerHP,
+                            onExit: onExit,
+                            onRematch: onRematch
                         )
                     } else {
                         BattleActionPanel(
@@ -1152,59 +1174,107 @@ private struct BattleResultPanel: View {
     let winner: BattleWinner
     let playerName: String
     let enemyName: String
+    let rounds: Int
+    let remainingHP: Int
     let onExit: () -> Void
+    let onRematch: () -> Void
 
     private var victory: Bool { winner == .player }
     private var accent: Color { victory ? BattleTheme.cyan : BattleTheme.violet }
 
     var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: victory ? "trophy.fill" : "shield.slash.fill")
-                .font(.system(size: 39, weight: .semibold))
-                .foregroundStyle(accent)
-                .shadow(color: accent.opacity(0.70), radius: 16)
-                .padding(.top, 5)
+        VStack(spacing: 11) {
+            HStack(spacing: 11) {
+                Image(systemName: victory ? "trophy.fill" : "shield.slash.fill")
+                    .font(.system(size: 29, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .shadow(color: accent.opacity(0.55), radius: 10)
 
-            Text(LocalizedStringKey(victory ? "VITÓRIA" : "DERROTA"))
-                .font(.system(size: 27, weight: .black, design: .rounded))
-                .tracking(2)
-                .foregroundStyle(.white)
-
-            Text(DeckSpawnL10n.format(
-                "%@ venceu %@.",
-                victory ? playerName : enemyName,
-                victory ? enemyName : playerName
-            ))
-            .font(.subheadline)
-            .foregroundStyle(.white.opacity(0.78))
-            .multilineTextAlignment(.center)
-
-            Button(action: onExit) {
-                HStack(spacing: 8) {
-                    Image(systemName: "house.fill")
-                    Text("VOLTAR AO MENU")
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(LocalizedStringKey(victory ? "VITÓRIA" : "DERROTA"))
+                        .font(.system(size: 24, weight: .black, design: .rounded))
+                        .tracking(1.5)
+                        .foregroundStyle(.white)
+                    Text(DeckSpawnL10n.format(
+                        "%@ venceu %@.",
+                        victory ? playerName : enemyName,
+                        victory ? enemyName : playerName
+                    ))
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.8))
+                    .fixedSize(horizontal: false, vertical: true)
                 }
-                .font(.system(size: 13, weight: .black))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 15)
-                .foregroundStyle(BattleTheme.ink)
-                .background(
-                    LinearGradient(colors: [BattleTheme.cyan, BattleTheme.violet], startPoint: .leading, endPoint: .trailing),
-                    in: RoundedRectangle(cornerRadius: 15)
-                )
+                Spacer(minLength: 0)
+            }
+
+            HStack(spacing: 10) {
+                resultStat(title: "RODADAS", value: rounds, icon: "arrow.triangle.2.circlepath")
+                resultStat(title: "HP RESTANTE", value: remainingHP, icon: "heart.fill")
+            }
+
+            Button(action: onRematch) {
+                Label("REVANCHE", systemImage: "arrow.clockwise")
+                    .font(.system(size: 14, weight: .black))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .foregroundStyle(BattleTheme.ink)
+                    .background(
+                        LinearGradient(
+                            colors: [BattleTheme.cyan, BattleTheme.violet],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        in: RoundedRectangle(cornerRadius: 14)
+                    )
             }
             .buttonStyle(.plain)
-            .padding(.top, 4)
+
+            Button(action: onExit) {
+                Label("VOLTAR AO MENU", systemImage: "house.fill")
+                    .font(.system(size: 12, weight: .bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .foregroundStyle(.white.opacity(0.95))
+                    .background(Color.white.opacity(0.10), in: RoundedRectangle(cornerRadius: 14))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                    }
+            }
+            .buttonStyle(.plain)
         }
-        .padding(21)
-        .background(BattleTheme.ink.opacity(0.95), in: RoundedRectangle(cornerRadius: 24))
+        .padding(17)
+        // Keep the AR scene visible behind the compact result panel.
+        .background(BattleTheme.ink.opacity(0.87), in: RoundedRectangle(cornerRadius: 23))
         .overlay {
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(accent.opacity(0.65), lineWidth: 1.3)
+            RoundedRectangle(cornerRadius: 23)
+                .stroke(accent.opacity(0.65), lineWidth: 1)
         }
-        .shadow(color: accent.opacity(0.17), radius: 22)
-        .padding(.horizontal, 24)
-        .padding(.bottom, 28)
+        .shadow(color: accent.opacity(0.15), radius: 16)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 23)
+    }
+
+    private func resultStat(title: LocalizedStringKey, value: Int, icon: String) -> some View {
+        HStack(spacing: 9) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(accent)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.65))
+                Text("\(value)")
+                    .font(.system(size: 19, weight: .black, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity)
+        .background(Color.white.opacity(0.065), in: RoundedRectangle(cornerRadius: 12))
     }
 }
 

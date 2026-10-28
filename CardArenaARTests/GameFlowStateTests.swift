@@ -77,6 +77,70 @@ final class GameFlowStateTests: XCTestCase {
     }
 
     @MainActor
+    func testRematchRequiresFinishedDuel() throws {
+        let flow = GameFlowState()
+        flow.startSinglePlayer()
+        XCTAssertFalse(flow.restartBattleWithSameCharacters())
+
+        let player = try XCTUnwrap(CardDatabase.all.first)
+        XCTAssertNotNil(flow.confirmPlayerCard(player))
+        flow.enemySummonDidFinish()
+        XCTAssertFalse(flow.restartBattleWithSameCharacters())
+        flow.returnToMainMenu()
+    }
+
+    @MainActor
+    func testRematchReusesCharactersResetsHPAndStartsVersus() throws {
+        let flow = GameFlowState()
+        flow.startSinglePlayer()
+        let player = try XCTUnwrap(CardDatabase.all.first)
+        let enemy = try XCTUnwrap(flow.confirmPlayerCard(player))
+        flow.enemySummonDidFinish()
+        var previousBattle = try XCTUnwrap(flow.battleState)
+        previousBattle.enemyHP = 0
+        previousBattle.playerHP = 13
+        previousBattle.round = 5
+        previousBattle.winner = .player
+        previousBattle.lastRoundResult = .playerWin
+        flow.battleState = previousBattle
+
+        XCTAssertTrue(flow.restartBattleWithSameCharacters())
+        let newBattle = try XCTUnwrap(flow.battleState)
+        XCTAssertEqual(newBattle.playerCard, player)
+        XCTAssertEqual(newBattle.enemyCard, enemy)
+        XCTAssertEqual(newBattle.playerHP, player.maxHP)
+        XCTAssertEqual(newBattle.enemyHP, enemy.maxHP)
+        XCTAssertEqual(newBattle.round, 1)
+        XCTAssertNil(newBattle.winner)
+        XCTAssertNil(newBattle.lastRoundResult)
+        XCTAssertNil(newBattle.lastPlayerMove)
+        XCTAssertNil(newBattle.lastEnemyMove)
+        XCTAssertEqual(flow.singlePlayerPhase, .battleReady)
+        XCTAssertTrue(flow.isShowingVersus)
+        XCTAssertFalse(flow.isBattleStarted)
+        XCTAssertNil(flow.battleCountdown)
+        XCTAssertEqual(flow.turnSecondsRemaining, BattleRules.turnDurationSeconds)
+        flow.returnToMainMenu()
+    }
+
+    @MainActor
+    func testRematchCannotBeTriggeredTwice() throws {
+        let flow = GameFlowState()
+        flow.startSinglePlayer()
+        let player = try XCTUnwrap(CardDatabase.all.first)
+        XCTAssertNotNil(flow.confirmPlayerCard(player))
+        flow.enemySummonDidFinish()
+        var finished = try XCTUnwrap(flow.battleState)
+        finished.winner = .enemy
+        finished.playerHP = 0
+        flow.battleState = finished
+
+        XCTAssertTrue(flow.restartBattleWithSameCharacters())
+        XCTAssertFalse(flow.restartBattleWithSameCharacters())
+        flow.returnToMainMenu()
+    }
+
+    @MainActor
     func testNewSessionStartsCleanAfterLeavingDuringVersus() throws {
         let flow = GameFlowState()
         flow.startSinglePlayer()

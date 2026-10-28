@@ -156,6 +156,16 @@
         }
       }
     },
+    "A câmera perdeu o rastreamento ou a arena não está disponível. Aponte para a área da batalha e tente novamente, ou volte ao menu para escanear a carta." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Camera tracking was lost or the AR arena is unavailable. Point at the battle area and try again, or return to the menu to scan the card."
+          }
+        }
+      }
+    },
     "A sala enviou uma resposta inválida." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -998,6 +1008,16 @@
         }
       }
     },
+    "HP RESTANTE" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "REMAINING HP"
+          }
+        }
+      }
+    },
     "Idioma" : {
       "localizations" : {
         "en" : {
@@ -1698,6 +1718,16 @@
         }
       }
     },
+    "Realidade aumentada indisponível" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Augmented reality unavailable"
+          }
+        }
+      }
+    },
     "REMOVENDO PERSONAGEM..." : {
       "localizations" : {
         "en" : {
@@ -1774,12 +1804,32 @@
         }
       }
     },
+    "REVANCHE" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "REMATCH"
+          }
+        }
+      }
+    },
     "RODADA %lld" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ROUND %lld"
+          }
+        }
+      }
+    },
+    "RODADAS" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ROUNDS"
           }
         }
       }
@@ -1969,6 +2019,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Time's up. Waiting for the host's result..."
+          }
+        }
+      }
+    },
+    "Tentar novamente" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try again"
           }
         }
       }
