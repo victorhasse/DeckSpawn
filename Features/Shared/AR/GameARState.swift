@@ -28,7 +28,32 @@ struct BattlePreparationFailureEvent: Equatable {
     let failure: BattlePreparationFailure
 }
 
+/// One visible number above one fighter; the position is updated while the
+/// camera moves, without changing the underlying battle state.
+struct FloatingDamageEvent: Identifiable {
+    let id: UUID
+    let amount: Int
+    var screenPoint: CGPoint?
+}
+
 final class GameARState: ObservableObject {
+
+    @Published private(set) var floatingDamageEvent: FloatingDamageEvent?
+
+    func showFloatingDamage(id: UUID, amount: Int, at point: CGPoint?) {
+        guard amount > 0 else { return }
+        floatingDamageEvent = FloatingDamageEvent(id: id, amount: amount, screenPoint: point)
+    }
+
+    func updateFloatingDamagePosition(_ point: CGPoint?, id: UUID) {
+        guard floatingDamageEvent?.id == id else { return }
+        floatingDamageEvent?.screenPoint = point
+    }
+
+    func clearFloatingDamage(id: UUID? = nil) {
+        guard id == nil || floatingDamageEvent?.id == id else { return }
+        floatingDamageEvent = nil
+    }
 
     @Published var phase: CardScanPhase = .searching
     @Published var holdProgress: CGFloat = 0
@@ -80,6 +105,7 @@ final class GameARState: ObservableObject {
         onPrepareBattle = nil
         onPrepareRematch = nil
         onBattleTurnAnimation = nil
+        clearFloatingDamage()
     }
 
     // Impede reproducoes duplicadas caso o encerramento seja recebido duas vezes.
@@ -96,7 +122,8 @@ final class GameARState: ObservableObject {
             BattleMove,
             BattleMove,
             BattleRoundResult,
-            BattleWinner?
+            BattleWinner?,
+            BattleDamage?
         ) -> Void)?
 
     init() {
@@ -155,6 +182,7 @@ final class GameARState: ObservableObject {
         // Stop the previous victory/defeat sound and permit the next result.
         SoundManager.shared.stopBattleResult()
         finalBattleAudioHandled = false
+        clearFloatingDamage()
         return true
     }
 
@@ -181,7 +209,8 @@ final class GameARState: ObservableObject {
         playerMove: BattleMove,
         enemyMove: BattleMove,
         result: BattleRoundResult,
-        winner: BattleWinner?
+        winner: BattleWinner?,
+        damage: BattleDamage? = nil
     ) {
         // BattleWinner e relativo a este aparelho: player = personagem local.
         // O som nao depende de o Coordinator AR ainda existir.
@@ -193,11 +222,13 @@ final class GameARState: ObservableObject {
             playerMove,
             enemyMove,
             result,
-            winner
+            winner,
+            damage
         )
     }
 
     func resetForNewSession() {
+        clearFloatingDamage()
         activeARCoordinatorID = nil
         finalBattleAudioHandled = false
         SoundManager.shared.stopBattleResult()

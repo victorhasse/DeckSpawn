@@ -44,6 +44,12 @@ struct SinglePlayerView: View {
 
                 )
 
+                // Projected from the RealityKit fighter, above the AR scene
+                // and HUD. No interaction or tap interception.
+                FloatingDamageOverlay(event: arState.floatingDamageEvent)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+
                 topControls
 
             }
@@ -379,7 +385,9 @@ struct SinglePlayerView: View {
 
             result,
 
-            winner in
+            winner,
+
+            damage in
 
             arState.animateBattleTurn(
 
@@ -389,7 +397,9 @@ struct SinglePlayerView: View {
 
                 result: result,
 
-                winner: winner
+                winner: winner,
+
+                damage: damage
 
             )
 
@@ -2110,4 +2120,49 @@ private struct ScannerBeam: View {
 
     }
 
+}
+
+
+// MARK: - Damage numbers projected over the RealityKit fighters
+private struct FloatingDamageOverlay: View {
+    let event: FloatingDamageEvent?
+
+    var body: some View {
+        GeometryReader { _ in
+            if let event {
+                FloatingDamageNumber(amount: event.amount)
+                    .id(event.id)
+                    .position(
+                        x: event.screenPoint?.x ?? -200,
+                        y: event.screenPoint?.y ?? -200
+                    )
+                    .opacity(event.screenPoint == nil ? 0 : 1)
+            }
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+private struct FloatingDamageNumber: View {
+    let amount: Int
+    @State private var rise: CGFloat = 0
+    @State private var opacity: Double = 1
+
+    var body: some View {
+        Text("−\(amount)")
+            .font(.system(size: 27, weight: .black, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(Color(red: 1.0, green: 0.35, blue: 0.28))
+            .shadow(color: .black.opacity(0.90), radius: 3, x: 1, y: 2)
+            .shadow(color: .red.opacity(0.35), radius: 8)
+            .fixedSize()
+            .offset(y: -rise)
+            .opacity(opacity)
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.85)) {
+                    rise = 52
+                    opacity = 0
+                }
+            }
+    }
 }

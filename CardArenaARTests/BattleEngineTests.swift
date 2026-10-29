@@ -147,4 +147,46 @@ final class BattleEngineTests: XCTestCase {
         XCTAssertGreaterThan(BattleRules.turnDurationSeconds, 0)
         XCTAssertGreaterThan(BattleRules.roundResultDisplaySeconds, 0)
     }
+
+    func testFloatingDamageReportsExactlyLostEnemyHP() throws {
+        let card = try XCTUnwrap(CardDatabase.all.first)
+        let enemy = try XCTUnwrap(CardDatabase.all.first { $0.id != card.id })
+        let before = BattleState.newBattle(player: card, enemy: enemy)
+        var after = before
+        after.enemyHP = max(0, before.enemyHP - 25)
+        XCTAssertEqual(
+            BattleDamage.between(before: before, after: after),
+            BattleDamage(target: .enemy, amount: before.enemyHP - after.enemyHP)
+        )
+    }
+
+    func testFloatingDamageReportsActualRemainingHPOnFinishingBlow() throws {
+        let card = try XCTUnwrap(CardDatabase.all.first)
+        let enemy = try XCTUnwrap(CardDatabase.all.first { $0.id != card.id })
+        var before = BattleState.newBattle(player: card, enemy: enemy)
+        before.playerHP = 4
+        var after = before
+        after.playerHP = 0
+        XCTAssertEqual(
+            BattleDamage.between(before: before, after: after),
+            BattleDamage(target: .player, amount: 4)
+        )
+    }
+
+    func testFloatingDamageIsAbsentOnDrawOrNoHPLoss() throws {
+        let card = try XCTUnwrap(CardDatabase.all.first)
+        let enemy = try XCTUnwrap(CardDatabase.all.first { $0.id != card.id })
+        let state = BattleState.newBattle(player: card, enemy: enemy)
+        XCTAssertNil(BattleDamage.between(before: state, after: state))
+    }
+
+    func testFloatingDamageDoesNotShowAmbiguousDoubleDamage() throws {
+        let card = try XCTUnwrap(CardDatabase.all.first)
+        let enemy = try XCTUnwrap(CardDatabase.all.first { $0.id != card.id })
+        let before = BattleState.newBattle(player: card, enemy: enemy)
+        var after = before
+        after.playerHP -= 2
+        after.enemyHP -= 2
+        XCTAssertNil(BattleDamage.between(before: before, after: after))
+    }
 }

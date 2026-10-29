@@ -54,7 +54,7 @@ final class GameFlowState: ObservableObject {
     @Published var isBattleStarted = false
     @Published var turnSecondsRemaining = BattleRules.turnDurationSeconds
 
-    var onBattleTurnResolved: ((BattleMove, BattleMove, BattleRoundResult, BattleWinner?) -> Void)?
+    var onBattleTurnResolved: ((BattleMove, BattleMove, BattleRoundResult, BattleWinner?, BattleDamage?) -> Void)?
 
     private var countdownGeneration = 0
     private var turnGeneration = 0
@@ -235,7 +235,8 @@ final class GameFlowState: ObservableObject {
                     playerMove,
                     enemyMove,
                     roundResult,
-                    resolution.state.winner
+                    resolution.state.winner,
+                    BattleDamage.between(before: currentState, after: resolution.state)
                 )
             }
 

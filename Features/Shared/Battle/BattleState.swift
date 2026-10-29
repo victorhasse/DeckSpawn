@@ -64,3 +64,32 @@ struct BattleTurnResolution {
     let state: BattleState
     let message: String
 }
+
+
+/// The actual HP lost by exactly one fighter in a resolved round.
+/// Independent of the advertised attack power, so a finishing blow cannot
+/// display more damage than the remaining HP.
+struct BattleDamage: Equatable {
+    enum Target: Equatable {
+        case player
+        case enemy
+    }
+
+    let target: Target
+    let amount: Int
+
+    static func between(before: BattleState, after: BattleState) -> BattleDamage? {
+        let lostByPlayer = max(0, before.playerHP - after.playerHP)
+        let lostByEnemy = max(0, before.enemyHP - after.enemyHP)
+
+        // A draw inflicts no damage. The current battle engine only damages
+        // one fighter per round; avoid displaying ambiguous double damage.
+        if lostByPlayer > 0 && lostByEnemy == 0 {
+            return BattleDamage(target: .player, amount: lostByPlayer)
+        }
+        if lostByEnemy > 0 && lostByPlayer == 0 {
+            return BattleDamage(target: .enemy, amount: lostByEnemy)
+        }
+        return nil
+    }
+}

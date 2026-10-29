@@ -83,13 +83,15 @@ struct ARViewContainer: UIViewRepresentable {
             playerMove,
             enemyMove,
             result,
-            winner in
+            winner,
+            damage in
 
             coordinator?.playBattleTurnAnimations(
                 playerMove: playerMove,
                 enemyMove: enemyMove,
                 result: result,
-                winner: winner
+                winner: winner,
+                damage: damage
             )
         }
 
@@ -321,6 +323,8 @@ extension ARViewContainer {
 
         // Invalida callbacks de rodadas anteriores ao iniciar ou limpar uma batalha.
         private var battleAudioGeneration = 0
+        // Invalidates projection ticks when a hit ends or the player leaves.
+        private var floatingDamageGeneration = 0
 
         #if DEBUG
         // Diagnostico leve: registre tempos de carga no console do Xcode.
@@ -362,6 +366,7 @@ extension ARViewContainer {
             scanGeneration += 1
             searchGeneration += 1
             battleAudioGeneration += 1
+            floatingDamageGeneration += 1
             assetLoadGeneration += 1
             state.detachARCoordinator(identifier)
             arView = nil
@@ -1339,6 +1344,8 @@ extension ARViewContainer {
             // A final hit/death may be scheduled for later. Prevent it from
             // overriding the new duel's idle animations.
             battleAudioGeneration += 1
+            floatingDamageGeneration += 1
+            state.clearFloatingDamage()
             _ = playCharacterAnimation(.idle, on: player)
             _ = playCharacterAnimation(.idle, on: enemy)
             return true
@@ -2740,6 +2747,8 @@ extension ARViewContainer {
 
         private func clearCurrentArena() {
 
+            floatingDamageGeneration += 1
+            state.clearFloatingDamage()
             battleAudioGeneration += 1
             assetLoadGeneration += 1
 
@@ -4493,7 +4502,8 @@ extension ARViewContainer {
             playerMove: BattleMove,
             enemyMove: BattleMove,
             result: BattleRoundResult,
-            winner: BattleWinner?
+            winner: BattleWinner?,
+            damage: BattleDamage?
         ) {
             guard isCurrentSession else { return }
             // O som final e disparado por GameARState.animateBattleTurn.
@@ -4557,6 +4567,14 @@ extension ARViewContainer {
                         return
                     }
 
+                    // The hit number appears with the reaction, NOT when
+                    // BattleEngine changes HP. Finishing blows synchronize
+                    // with the defeat animation instead of Hit.
+                    if let damage, damage.amount > 0 {
+                        let victim = damage.target == .player ? player : enemy
+                        self.beginProjectedDamage(amount: damage.amount, on: victim)
+                    }
+
                     switch result {
 
                     case .draw:
@@ -4610,6 +4628,63 @@ extension ARViewContainer {
                     }
 
                 }
+        }
+
+        /// Track the victim's visual bounds while the camera moves. This is
+        /// only active for the ~0.9-second lifetime of a damage number.
+        /// Uses a lightweight projection every 50 ms (not a per-frame HUD loop).
+        private func beginProjectedDamage(amount: Int, on victim: Entity) {
+            guard isCurrentSession, arView != nil, amount > 0 else { return }
+            floatingDamageGeneration += 1
+            let generation = floatingDamageGeneration
+            let eventID = UUID()
+            let bounds = victim.visualBounds(relativeTo: victim)
+            let height = max(bounds.max.y - bounds.min.y, 0.01)
+            let localPoint = SIMD3<Float>(
+                (bounds.min.x + bounds.max.x) * 0.5,
+                bounds.max.y + max(height * 0.15, 0.035),
+                (bounds.min.z + bounds.max.z) * 0.5
+            )
+
+            let started = CACurrentMediaTime()
+            state.showFloatingDamage(id: eventID, amount: amount, at: nil)
+
+            refreshProjectedDamage(
+                victim: victim, localPoint: localPoint,
+                started: started, generation: generation, eventID: eventID
+            )
+        }
+
+        private func refreshProjectedDamage(
+            victim: Entity, localPoint: SIMD3<Float>, started: TimeInterval,
+            generation: Int, eventID: UUID
+        ) {
+            guard isCurrentSession,
+                  floatingDamageGeneration == generation,
+                  currentCharacterEntity === victim || currentEnemyEntity === victim,
+                  let arView else { return }
+
+            guard CACurrentMediaTime() - started < 0.95 else {
+                state.clearFloatingDamage(id: eventID)
+                return
+            }
+            let world = victim.convert(position: localPoint, to: nil)
+            let point = arView.project(world)
+            let visible = point.flatMap { p -> CGPoint? in
+                guard p.x.isFinite, p.y.isFinite,
+                      p.x >= 0, p.y >= 0,
+                      p.x <= arView.bounds.width,
+                      p.y <= arView.bounds.height else { return nil }
+                return p
+            }
+            state.updateFloatingDamagePosition(visible, id: eventID)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self, weak victim] in
+                guard let self, let victim else { return }
+                self.refreshProjectedDamage(
+                    victim: victim, localPoint: localPoint,
+                    started: started, generation: generation, eventID: eventID
+                )
+            }
         }
 
         @discardableResult

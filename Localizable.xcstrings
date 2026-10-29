@@ -108,6 +108,9 @@
         }
       }
     },
+    "−%lld" : {
+
+    },
     "A arena foi perdida. Escaneie sua carta novamente." : {
       "extractionState" : "stale",
       "localizations" : {
