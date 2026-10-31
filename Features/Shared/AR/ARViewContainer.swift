@@ -84,14 +84,20 @@ struct ARViewContainer: UIViewRepresentable {
             enemyMove,
             result,
             winner,
-            damage in
+            damage,
+            animationsCompleted in
 
-            coordinator?.playBattleTurnAnimations(
+            guard let coordinator else {
+                animationsCompleted?()
+                return
+            }
+            coordinator.playBattleTurnAnimations(
                 playerMove: playerMove,
                 enemyMove: enemyMove,
                 result: result,
                 winner: winner,
-                damage: damage
+                damage: damage,
+                animationsCompleted: animationsCompleted
             )
         }
 
@@ -325,6 +331,11 @@ extension ARViewContainer {
         private var battleAudioGeneration = 0
         // Invalidates projection ticks when a hit ends or the player leaves.
         private var floatingDamageGeneration = 0
+        // Efeitos 3D temporarios, sem novos USDZ ou processamento de particulas.
+        private let battleEffects = BattleEffectManager()
+        // Guarda o controlador da ação atual para sincronizar o VFX por frame.
+        private var animationPlaybackControllers: [ObjectIdentifier: AnimationPlaybackController] = [:]
+        private var currentEnemyCardName: String?
 
         #if DEBUG
         // Diagnostico leve: registre tempos de carga no console do Xcode.
@@ -367,6 +378,7 @@ extension ARViewContainer {
             searchGeneration += 1
             battleAudioGeneration += 1
             floatingDamageGeneration += 1
+            battleEffects.cancelAll()
             assetLoadGeneration += 1
             state.detachARCoordinator(identifier)
             arView = nil
@@ -1345,6 +1357,7 @@ extension ARViewContainer {
             // overriding the new duel's idle animations.
             battleAudioGeneration += 1
             floatingDamageGeneration += 1
+            battleEffects.cancelAll()
             state.clearFloatingDamage()
             _ = playCharacterAnimation(.idle, on: player)
             _ = playCharacterAnimation(.idle, on: enemy)
@@ -1466,6 +1479,7 @@ extension ARViewContainer {
             currentEnemyEntity =
 
                 enemyEntity
+            currentEnemyCardName = enemy.referenceImageName
 
 
 
@@ -2747,6 +2761,8 @@ extension ARViewContainer {
 
         private func clearCurrentArena() {
 
+            battleEffects.cancelAll()
+            currentEnemyCardName = nil
             floatingDamageGeneration += 1
             state.clearFloatingDamage()
             battleAudioGeneration += 1
@@ -4503,9 +4519,13 @@ extension ARViewContainer {
             enemyMove: BattleMove,
             result: BattleRoundResult,
             winner: BattleWinner?,
-            damage: BattleDamage?
+            damage: BattleDamage?,
+            animationsCompleted: (() -> Void)? = nil
         ) {
-            guard isCurrentSession else { return }
+            guard isCurrentSession else {
+                animationsCompleted?()
+                return
+            }
             // O som final e disparado por GameARState.animateBattleTurn.
             // Aqui mantemos somente as animacoes visuais dos personagens.
 
@@ -4515,8 +4535,12 @@ extension ARViewContainer {
                 let enemy =
                     currentEnemyEntity
             else {
+                animationsCompleted?()
                 return
             }
+
+            // Elimina efeitos restantes da rodada anterior antes de criar novos.
+            battleEffects.cancelAll()
 
             let playerDuration =
                 playCharacterAnimation(
@@ -4534,16 +4558,84 @@ extension ARViewContainer {
                     on: enemy
                 ) ?? 0
 
-            let reactionDelay =
-                max(
-                    max(
-                        playerDuration,
-                        enemyDuration
-                    ),
-                    0.35
-                ) + 0.05
+            // For an actual damaging Kamehameha, move the Hit/Defeat reaction
+            // to the projectile's contact rather than waiting until after the
+            // 3.33-second clip. Never interrupt the opponent's own attack early.
+            let playerGokuImpactHits =
+                selectedCard?.referenceImageName == "goku_cardgame"
+                && playerMove == .impact
+                && damage?.target == .enemy
+                && (damage?.amount ?? 0) > 0
+            let enemyGokuImpactHits =
+                currentEnemyCardName == "goku_cardgame"
+                && enemyMove == .impact
+                && damage?.target == .player
+                && (damage?.amount ?? 0) > 0
+            let reactionDelay: TimeInterval
+            if state.singlePlayerEffectsEnabled && playerGokuImpactHits && playerDuration > 0 {
+                reactionDelay = KamehamehaTiming.reactionDelayForSuccessfulHit(
+                    gokuClipDuration: playerDuration,
+                    opponentClipDuration: enemyDuration
+                )
+            } else if state.singlePlayerEffectsEnabled && enemyGokuImpactHits && enemyDuration > 0 {
+                reactionDelay = KamehamehaTiming.reactionDelayForSuccessfulHit(
+                    gokuClipDuration: enemyDuration,
+                    opponentClipDuration: playerDuration
+                )
+            } else {
+                reactionDelay = max(max(playerDuration, enemyDuration), 0.35) + 0.05
+            }
 
             let audioGeneration = battleAudioGeneration
+            if state.singlePlayerEffectsEnabled,
+               let arena = currentArenaEntity,
+               let scene = arView?.scene {
+                // Impacto do Goku = Kamehameha. Tecnica = socos (5.3B).
+                if selectedCard?.referenceImageName == "goku_cardgame",
+                   playerMove == .impact, playerDuration > 0,
+                   let controller = animationPlaybackControllers[ObjectIdentifier(player)] {
+                    battleEffects.playGokuImpact(
+                        attacker: player,
+                        defender: enemy,
+                        arena: arena,
+                        scene: scene,
+                        controller: controller,
+                        clipDuration: playerDuration,
+                        reactionDelay: reactionDelay,
+                        hitsDefender: damage?.target == .enemy && (damage?.amount ?? 0) > 0,
+                        isValid: { [weak self, weak player, weak enemy, weak arena] in
+                            guard let self, let player, let enemy, let arena else { return false }
+                            return self.isCurrentSession
+                                && self.battleAudioGeneration == audioGeneration
+                                && self.currentArenaEntity === arena
+                                && self.currentCharacterEntity === player
+                                && self.currentEnemyEntity === enemy
+                        }
+                    )
+                }
+                if currentEnemyCardName == "goku_cardgame",
+                   enemyMove == .impact, enemyDuration > 0,
+                   let controller = animationPlaybackControllers[ObjectIdentifier(enemy)] {
+                    battleEffects.playGokuImpact(
+                        attacker: enemy,
+                        defender: player,
+                        arena: arena,
+                        scene: scene,
+                        controller: controller,
+                        clipDuration: enemyDuration,
+                        reactionDelay: reactionDelay,
+                        hitsDefender: damage?.target == .player && (damage?.amount ?? 0) > 0,
+                        isValid: { [weak self, weak player, weak enemy, weak arena] in
+                            guard let self, let player, let enemy, let arena else { return false }
+                            return self.isCurrentSession
+                                && self.battleAudioGeneration == audioGeneration
+                                && self.currentArenaEntity === arena
+                                && self.currentCharacterEntity === player
+                                && self.currentEnemyEntity === enemy
+                        }
+                    )
+                }
+            }
 
             DispatchQueue.main
                 .asyncAfter(
@@ -4575,6 +4667,10 @@ extension ARViewContainer {
                         self.beginProjectedDamage(amount: damage.amount, on: victim)
                     }
 
+                    // Only a nonterminal round can unlock another action.
+                    // Timing comes from the RealityKit playback controller,
+                    // not an arbitrary 2-second unlock timer.
+                    var reactionDuration: TimeInterval = 0
                     switch result {
 
                     case .draw:
@@ -4597,10 +4693,10 @@ extension ARViewContainer {
 
                         } else {
 
-                            self.playCharacterAnimation(
+                            reactionDuration = self.playCharacterAnimation(
                                 .hit,
                                 on: enemy
-                            )
+                            ) ?? 0
                         }
 
                     case .enemyWin:
@@ -4620,10 +4716,31 @@ extension ARViewContainer {
 
                         } else {
 
-                            self.playCharacterAnimation(
+                            reactionDuration = self.playCharacterAnimation(
                                 .hit,
                                 on: player
-                            )
+                            ) ?? 0
+                        }
+                    }
+
+                    // Wait for the attack clips, then the hit/guard reaction.
+                    // The old turn cannot complete after a rematch or exit.
+                    if winner == nil, let animationsCompleted {
+                        // Even when the Hit starts before Goku's clip finishes,
+                        // never unlock the next turn before BOTH attack clips
+                        // and the reaction are complete (5.3A.1 protection).
+                        let attackTail = max(
+                            0.0, max(playerDuration, enemyDuration) - reactionDelay
+                        )
+                        DispatchQueue.main.asyncAfter(
+                            deadline: .now() + max(reactionDuration, attackTail) + 0.12
+                        ) { [weak self, weak player, weak enemy] in
+                            guard let self, let player, let enemy,
+                                  self.isCurrentSession,
+                                  self.battleAudioGeneration == audioGeneration,
+                                  self.currentCharacterEntity === player,
+                                  self.currentEnemyEntity === enemy else { return }
+                            animationsCompleted()
                         }
                     }
 
@@ -4739,6 +4856,7 @@ extension ARViewContainer {
                     key
                 ] ?? 0
 
+            animationPlaybackControllers.removeValue(forKey: key)
             animatedModel
                 .stopAllAnimations(
                     recursive: true
@@ -4769,6 +4887,7 @@ extension ARViewContainer {
                             false
                     )
 
+            animationPlaybackControllers[key] = controller
             let duration =
                 controller.duration
 
@@ -4821,6 +4940,7 @@ extension ARViewContainer {
                     character
                 )
 
+            animationPlaybackControllers.removeValue(forKey: key)
             characterAnimatedModels
                 .removeValue(
                     forKey: key

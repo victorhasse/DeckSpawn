@@ -37,6 +37,7 @@ struct ContentView: View {
                 onBack: { gameFlow.returnToMainMenu() },
                 onContinue: { difficulty in
                     arState.resetForNewSession()
+                    arState.enableSinglePlayerEffects()
                     gameFlow.startSinglePlayer(difficulty: difficulty)
                 }
             )

@@ -387,7 +387,9 @@ struct SinglePlayerView: View {
 
             winner,
 
-            damage in
+            damage,
+
+            animationsFinished in
 
             arState.animateBattleTurn(
 
@@ -399,7 +401,9 @@ struct SinglePlayerView: View {
 
                 winner: winner,
 
-                damage: damage
+                damage: damage,
+
+                animationsCompleted: animationsFinished
 
             )
 

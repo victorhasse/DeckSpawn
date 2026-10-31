@@ -14,6 +14,32 @@ enum SinglePlayerPhase {
     case battleReady
 }
 
+/// A round unlocks only after the result has been shown AND the
+/// characters have finished their combat animations. A separate recovery
+/// interval is applied after both conditions are true.
+struct RoundCompletionGate {
+    private(set) var resultDisplayFinished = false
+    private(set) var animationsFinished = false
+    private(set) var didScheduleRecovery = false
+
+    mutating func markResultDisplayFinished() -> Bool {
+        resultDisplayFinished = true
+        return shouldScheduleRecovery()
+    }
+
+    mutating func markAnimationsFinished() -> Bool {
+        animationsFinished = true
+        return shouldScheduleRecovery()
+    }
+
+    private mutating func shouldScheduleRecovery() -> Bool {
+        guard resultDisplayFinished, animationsFinished,
+              !didScheduleRecovery else { return false }
+        didScheduleRecovery = true
+        return true
+    }
+}
+
 @MainActor
 final class GameFlowState: ObservableObject {
     @Published var screen: AppScreen = .mainMenu
@@ -54,7 +80,11 @@ final class GameFlowState: ObservableObject {
     @Published var isBattleStarted = false
     @Published var turnSecondsRemaining = BattleRules.turnDurationSeconds
 
-    var onBattleTurnResolved: ((BattleMove, BattleMove, BattleRoundResult, BattleWinner?, BattleDamage?) -> Void)?
+    /// The final argument is called by RealityKit after the current round's
+    /// attack/reaction sequence. If AR is unavailable, a watchdog releases
+    /// the game instead of leaving the controls blocked forever.
+    var onBattleTurnResolved:
+        ((BattleMove, BattleMove, BattleRoundResult, BattleWinner?, BattleDamage?, @escaping () -> Void) -> Void)?
 
     private var countdownGeneration = 0
     private var turnGeneration = 0
@@ -63,6 +93,7 @@ final class GameFlowState: ObservableObject {
     // The VS intro must never outlive its battle.
     private var versusGeneration = 0
     private let versusDuration: TimeInterval = 2.5
+    private var roundCompletionGate: RoundCompletionGate?
 
     func startSinglePlayer() {
         resetBattleClocks()
@@ -195,6 +226,7 @@ final class GameFlowState: ObservableObject {
         committedCPUMove = nil
 
         turnGeneration += 1
+        roundCompletionGate = nil
         isResolvingTurn = true
 
         if automatic {
@@ -229,18 +261,34 @@ final class GameFlowState: ObservableObject {
             // Update the predictor only after the round actually finishes.
             self.cpuAI.recordCompletedPlayerMove(playerMove)
 
-            if let roundResult = resolution.state.lastRoundResult {
-                GameHaptics.roundResult(roundResult, winner: resolution.state.winner)
-                self.onBattleTurnResolved?(
-                    playerMove,
-                    enemyMove,
-                    roundResult,
-                    resolution.state.winner,
-                    BattleDamage.between(before: currentState, after: resolution.state)
-                )
+            let isFinishingBattle = resolution.state.winner != nil
+            if !isFinishingBattle {
+                self.roundCompletionGate = RoundCompletionGate()
             }
 
-            if resolution.state.winner != nil {
+            if let roundResult = resolution.state.lastRoundResult {
+                GameHaptics.roundResult(roundResult, winner: resolution.state.winner)
+                if let onBattleTurnResolved = self.onBattleTurnResolved {
+                    onBattleTurnResolved(
+                        playerMove,
+                        enemyMove,
+                        roundResult,
+                        resolution.state.winner,
+                        BattleDamage.between(before: currentState, after: resolution.state)
+                    ) { [weak self] in
+                        self?.markRoundAnimationsFinished(generation: generation)
+                    }
+                } else if !isFinishingBattle {
+                    // No AR coordinator attached (e.g. a unit test).
+                    self.markRoundAnimationsFinished(generation: generation)
+                }
+            } else if !isFinishingBattle {
+                self.markRoundAnimationsFinished(generation: generation)
+            }
+
+            if isFinishingBattle {
+                // Victory/defeat is terminal: never unlock the attack buttons.
+                self.roundCompletionGate = nil
                 self.isResolvingTurn = false
                 self.isBattleStarted = false
                 self.turnSecondsRemaining = 0
@@ -248,14 +296,56 @@ final class GameFlowState: ObservableObject {
                 return
             }
 
+            // The message must remain visible for at least the configured time.
             DispatchQueue.main.asyncAfter(
                 deadline: .now() + BattleRules.roundResultDisplaySeconds
             ) { [weak self] in
-                guard let self, self.battleGeneration == generation else { return }
-                self.isResolvingTurn = false
-                self.lastTurnMessage = DeckSpawnL10n.text("Escolha sua próxima ação.")
-                self.startTurnTimer()
+                self?.markRoundResultDisplayFinished(generation: generation)
             }
+
+            // A missing RealityKit completion must not block a battle forever.
+            DispatchQueue.main.asyncAfter(
+                deadline: .now() + BattleRules.maxRoundAnimationWaitSeconds
+            ) { [weak self] in
+                self?.markRoundAnimationsFinished(generation: generation)
+            }
+        }
+    }
+
+    private func markRoundAnimationsFinished(generation: Int) {
+        guard generation == battleGeneration,
+              isResolvingTurn, battleState?.winner == nil,
+              var gate = roundCompletionGate else { return }
+        let schedule = gate.markAnimationsFinished()
+        roundCompletionGate = gate
+        if schedule { scheduleNextRound(generation: generation) }
+    }
+
+    private func markRoundResultDisplayFinished(generation: Int) {
+        guard generation == battleGeneration,
+              isResolvingTurn, battleState?.winner == nil,
+              var gate = roundCompletionGate else { return }
+        let schedule = gate.markResultDisplayFinished()
+        roundCompletionGate = gate
+        if schedule { scheduleNextRound(generation: generation) }
+    }
+
+    private func scheduleNextRound(generation: Int) {
+        // A small breathing interval follows both the result and animations.
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + BattleRules.roundRecoverySeconds
+        ) { [weak self] in
+            guard let self,
+                  generation == self.battleGeneration,
+                  self.screen == .singlePlayer,
+                  self.isBattleStarted,
+                  self.isResolvingTurn,
+                  self.battleState?.winner == nil,
+                  self.roundCompletionGate?.didScheduleRecovery == true else { return }
+            self.roundCompletionGate = nil
+            self.isResolvingTurn = false
+            self.lastTurnMessage = DeckSpawnL10n.text("Escolha sua próxima ação.")
+            self.startTurnTimer()
         }
     }
 
@@ -330,5 +420,6 @@ final class GameFlowState: ObservableObject {
         battleGeneration += 1
         cpuAI.reset()
         committedCPUMove = nil
+        roundCompletionGate = nil
     }
 }

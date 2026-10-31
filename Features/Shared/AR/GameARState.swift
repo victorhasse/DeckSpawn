@@ -38,6 +38,13 @@ struct FloatingDamageEvent: Identifiable {
 
 final class GameARState: ObservableObject {
 
+    // Ativa efeitos experimentais somente nas batalhas singleplayer.
+    private(set) var singlePlayerEffectsEnabled = false
+
+    func enableSinglePlayerEffects() {
+        singlePlayerEffectsEnabled = true
+    }
+
     @Published private(set) var floatingDamageEvent: FloatingDamageEvent?
 
     func showFloatingDamage(id: UUID, amount: Int, at point: CGPoint?) {
@@ -123,7 +130,8 @@ final class GameARState: ObservableObject {
             BattleMove,
             BattleRoundResult,
             BattleWinner?,
-            BattleDamage?
+            BattleDamage?,
+            (() -> Void)?
         ) -> Void)?
 
     init() {
@@ -210,7 +218,8 @@ final class GameARState: ObservableObject {
         enemyMove: BattleMove,
         result: BattleRoundResult,
         winner: BattleWinner?,
-        damage: BattleDamage? = nil
+        damage: BattleDamage? = nil,
+        animationsCompleted: (() -> Void)? = nil
     ) {
         // BattleWinner e relativo a este aparelho: player = personagem local.
         // O som nao depende de o Coordinator AR ainda existir.
@@ -218,16 +227,23 @@ final class GameARState: ObservableObject {
             announceLocalBattleResult(didWin: winner == .player)
         }
 
-        onBattleTurnAnimation?(
-            playerMove,
-            enemyMove,
-            result,
-            winner,
-            damage
-        )
+        if let onBattleTurnAnimation {
+            onBattleTurnAnimation(
+                playerMove,
+                enemyMove,
+                result,
+                winner,
+                damage,
+                animationsCompleted
+            )
+        } else {
+            // The AR view may have been removed while a turn was resolving.
+            animationsCompleted?()
+        }
     }
 
     func resetForNewSession() {
+        singlePlayerEffectsEnabled = false
         clearFloatingDamage()
         activeARCoordinatorID = nil
         finalBattleAudioHandled = false
