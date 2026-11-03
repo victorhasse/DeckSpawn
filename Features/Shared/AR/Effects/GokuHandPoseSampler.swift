@@ -19,6 +19,15 @@ final class GokuHandPoseSampler {
     }
 
     func midpoint(in arena: AnchorEntity, attacker: Entity) -> SIMD3<Float>? {
+        guard let points = positions(in: arena, attacker: attacker) else { return nil }
+        return (points.left + points.right) * 0.5
+    }
+
+    /// Hand positions in the AR anchor coordinate system, sampled from the
+    /// *current animated pose*, not the model's bind pose.
+    func positions(
+        in arena: AnchorEntity, attacker: Entity
+    ) -> (left: SIMD3<Float>, right: SIMD3<Float>)? {
         guard let model, model.parent != nil else { return nil }
         let joints = model.jointTransforms
         func endpoint(_ chain: [Int]) -> SIMD3<Float>? {
@@ -35,24 +44,27 @@ final class GokuHandPoseSampler {
         guard let left = endpoint(rig.leftChain),
               let right = endpoint(rig.rightChain) else { return nil }
         let mid = (left + right) * 0.5
-        guard mid.x.isFinite, mid.y.isFinite, mid.z.isFinite else { return nil }
+        guard mid.x.isFinite, mid.y.isFinite, mid.z.isFinite,
+              left.x.isFinite, left.y.isFinite, left.z.isFinite,
+              right.x.isFinite, right.y.isFinite, right.z.isFinite else { return nil }
 
-        // Protect against models with joint transforms in a different unit or
-        // coordinate convention. Never spawn the orb underground or far away.
+        // Reject invalid coordinate conventions or out-of-scale skinned poses.
         let bounds = attacker.visualBounds(recursive: true, relativeTo: arena)
         let margin: Float = 0.18
-        guard mid.x >= bounds.min.x - margin, mid.x <= bounds.max.x + margin,
-              mid.y >= bounds.min.y - margin, mid.y <= bounds.max.y + margin,
-              mid.z >= bounds.min.z - margin, mid.z <= bounds.max.z + margin else {
-            if !didWarnAboutPose {
-                didWarnAboutPose = true
-                #if DEBUG
-                print("[DeckSpawn][VFX] Goku: articulações fora dos limites; usando fallback")
-                #endif
+        for point in [left, right] {
+            guard point.x >= bounds.min.x - margin, point.x <= bounds.max.x + margin,
+                  point.y >= bounds.min.y - margin, point.y <= bounds.max.y + margin,
+                  point.z >= bounds.min.z - margin, point.z <= bounds.max.z + margin else {
+                if !didWarnAboutPose {
+                    didWarnAboutPose = true
+                    #if DEBUG
+                    print("[DeckSpawn][VFX] Goku: articulações fora dos limites; usando fallback")
+                    #endif
+                }
+                return nil
             }
-            return nil
         }
-        return mid
+        return (left, right)
     }
 
     private static func findRig(in entity: Entity) -> (ModelEntity, GokuHandRig)? {

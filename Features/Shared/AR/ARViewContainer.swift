@@ -4590,7 +4590,7 @@ extension ARViewContainer {
             if state.singlePlayerEffectsEnabled,
                let arena = currentArenaEntity,
                let scene = arView?.scene {
-                // Impacto do Goku = Kamehameha. Tecnica = socos (5.3B).
+                // Impacto = Kamehameha; Técnica = socos com slashes e bursts anime (5.3B.2).
                 if selectedCard?.referenceImageName == "goku_cardgame",
                    playerMove == .impact, playerDuration > 0,
                    let controller = animationPlaybackControllers[ObjectIdentifier(player)] {
@@ -4625,6 +4625,52 @@ extension ARViewContainer {
                         clipDuration: enemyDuration,
                         reactionDelay: reactionDelay,
                         hitsDefender: damage?.target == .player && (damage?.amount ?? 0) > 0,
+                        isValid: { [weak self, weak player, weak enemy, weak arena] in
+                            guard let self, let player, let enemy, let arena else { return false }
+                            return self.isCurrentSession
+                                && self.battleAudioGeneration == audioGeneration
+                                && self.currentArenaEntity === arena
+                                && self.currentCharacterEntity === player
+                                && self.currentEnemyEntity === enemy
+                        }
+                    )
+                }
+                if selectedCard?.referenceImageName == "goku_cardgame",
+                   playerMove == .technique, playerDuration > 0,
+                   let controller = animationPlaybackControllers[ObjectIdentifier(player)] {
+                    battleEffects.playGokuTechnique(
+                        attacker: player,
+                        defender: enemy,
+                        arena: arena,
+                        scene: scene,
+                        controller: controller,
+                        clipDuration: playerDuration,
+                        reactionDelay: reactionDelay,
+                        hitsDefender: damage?.target == .enemy && (damage?.amount ?? 0) > 0,
+                        cameraRotation: arView?.cameraTransform.rotation,
+                        isValid: { [weak self, weak player, weak enemy, weak arena] in
+                            guard let self, let player, let enemy, let arena else { return false }
+                            return self.isCurrentSession
+                                && self.battleAudioGeneration == audioGeneration
+                                && self.currentArenaEntity === arena
+                                && self.currentCharacterEntity === player
+                                && self.currentEnemyEntity === enemy
+                        }
+                    )
+                }
+                if currentEnemyCardName == "goku_cardgame",
+                   enemyMove == .technique, enemyDuration > 0,
+                   let controller = animationPlaybackControllers[ObjectIdentifier(enemy)] {
+                    battleEffects.playGokuTechnique(
+                        attacker: enemy,
+                        defender: player,
+                        arena: arena,
+                        scene: scene,
+                        controller: controller,
+                        clipDuration: enemyDuration,
+                        reactionDelay: reactionDelay,
+                        hitsDefender: damage?.target == .player && (damage?.amount ?? 0) > 0,
+                        cameraRotation: arView?.cameraTransform.rotation,
                         isValid: { [weak self, weak player, weak enemy, weak arena] in
                             guard let self, let player, let enemy, let arena else { return false }
                             return self.isCurrentSession
