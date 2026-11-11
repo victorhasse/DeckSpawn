@@ -76,6 +76,11 @@ struct ARViewContainer: UIViewRepresentable {
             coordinator?.prepareSameCharacterRematch() ?? false
         }
 
+        // The same stage ribbon handles VS, countdown, battle and result.
+        state.onStageRibbonCueChanged = { [weak coordinator = context.coordinator] cue in
+            coordinator?.applyStageRibbonCue(cue)
+        }
+
 
 
         state.onBattleTurnAnimation = {
@@ -223,9 +228,9 @@ extension ARViewContainer {
 
         private let stageDistance: Float = 1.20
 
-        private let stageRadius: Float = 0.42
+        private let stageRadius: Float = 0.80
 
-        private let stageHeight: Float = 0.025
+        private let stageHeight: Float = 0.075
 
         private let summonPreDelay: TimeInterval = 0.80
 
@@ -333,6 +338,16 @@ extension ARViewContainer {
         private var floatingDamageGeneration = 0
         // Efeitos 3D temporarios, sem novos USDZ ou processamento de particulas.
         private let battleEffects = BattleEffectManager()
+        // Efeitos universais de Guarda, independentes dos VFX do Goku.
+        private let guardEffects = GuardShieldEffectManager()
+        // Faixa lateral do palco, com marca e confronto atual.
+        private let stageRibbon = StageRibbonManager()
+
+        func applyStageRibbonCue(_ cue: StageRibbonCue) {
+            guard isCurrentSession else { return }
+            stageRibbon.setCue(cue)
+        }
+
         // Guarda o controlador da ação atual para sincronizar o VFX por frame.
         private var animationPlaybackControllers: [ObjectIdentifier: AnimationPlaybackController] = [:]
         private var currentEnemyCardName: String?
@@ -379,6 +394,8 @@ extension ARViewContainer {
             battleAudioGeneration += 1
             floatingDamageGeneration += 1
             battleEffects.cancelAll()
+            guardEffects.cancelAll()
+            stageRibbon.reset()
             assetLoadGeneration += 1
             state.detachARCoordinator(identifier)
             arView = nil
@@ -1252,6 +1269,8 @@ extension ARViewContainer {
 
 
             let stage = makeStage()
+            let ribbon = stageRibbon.makeRing(radius: stageRadius, stageHeight: stageHeight)
+            stageRibbon.setCue(state.stageRibbonCue)
 
             let aura = makeArenaAuraDisc()
 
@@ -1264,6 +1283,7 @@ extension ARViewContainer {
 
 
             anchorEntity.addChild(stage)
+            anchorEntity.addChild(ribbon)
 
             anchorEntity.addChild(aura)
 
@@ -1278,6 +1298,7 @@ extension ARViewContainer {
             // Apresenta o palco imediatamente; o download/processamento dos USDZ
             // nao pode bloquear a camera enquanto o personagem e preparado.
             arView.scene.addAnchor(anchorEntity)
+            stageRibbon.start(in: arView.scene)
 
             let expectedGeneration = assetLoadGeneration
             let expectedScan = scanGeneration
@@ -1358,6 +1379,7 @@ extension ARViewContainer {
             battleAudioGeneration += 1
             floatingDamageGeneration += 1
             battleEffects.cancelAll()
+            guardEffects.cancelAll()
             state.clearFloatingDamage()
             _ = playCharacterAnimation(.idle, on: player)
             _ = playCharacterAnimation(.idle, on: enemy)
@@ -1480,6 +1502,12 @@ extension ARViewContainer {
 
                 enemyEntity
             currentEnemyCardName = enemy.referenceImageName
+            stageRibbon.setMatchup(
+                player: selectedCard?.displayName ?? "PLAYER",
+                opponent: enemy.displayName,
+                radius: stageRadius,
+                stageHeight: stageHeight
+            )
 
 
 
@@ -2762,6 +2790,8 @@ extension ARViewContainer {
         private func clearCurrentArena() {
 
             battleEffects.cancelAll()
+            guardEffects.cancelAll()
+            stageRibbon.reset()
             currentEnemyCardName = nil
             floatingDamageGeneration += 1
             state.clearFloatingDamage()
@@ -4541,6 +4571,7 @@ extension ARViewContainer {
 
             // Elimina efeitos restantes da rodada anterior antes de criar novos.
             battleEffects.cancelAll()
+            guardEffects.cancelAll()
 
             let playerDuration =
                 playCharacterAnimation(
@@ -4590,6 +4621,50 @@ extension ARViewContainer {
             if state.singlePlayerEffectsEnabled,
                let arena = currentArenaEntity,
                let scene = arView?.scene {
+                // Guarda é universal: todos os personagens recebem a mesma
+                // barreira frontal. O pulso forte só acontece quando Guarda
+                // vence Impacto; Técnica vence Guarda e não dispara um "bloqueio".
+                // Um gerenciador separado permite duas Guardas na mesma rodada.
+                if playerMove == .defense {
+                    guardEffects.playGuard(
+                        defender: player,
+                        attacker: enemy,
+                        arena: arena,
+                        guardClipDuration: playerDuration,
+                        opponentClipDuration: enemyDuration,
+                        blocksImpact: enemyMove == .impact,
+                        breaksGuard: enemyMove == .technique,
+                        isGoku: selectedCard?.referenceImageName == "goku_cardgame",
+                        isValid: { [weak self, weak player, weak enemy, weak arena] in
+                            guard let self, let player, let enemy, let arena else { return false }
+                            return self.isCurrentSession
+                                && self.battleAudioGeneration == audioGeneration
+                                && self.currentArenaEntity === arena
+                                && self.currentCharacterEntity === player
+                                && self.currentEnemyEntity === enemy
+                        }
+                    )
+                }
+                if enemyMove == .defense {
+                    guardEffects.playGuard(
+                        defender: enemy,
+                        attacker: player,
+                        arena: arena,
+                        guardClipDuration: enemyDuration,
+                        opponentClipDuration: playerDuration,
+                        blocksImpact: playerMove == .impact,
+                        breaksGuard: playerMove == .technique,
+                        isGoku: currentEnemyCardName == "goku_cardgame",
+                        isValid: { [weak self, weak player, weak enemy, weak arena] in
+                            guard let self, let player, let enemy, let arena else { return false }
+                            return self.isCurrentSession
+                                && self.battleAudioGeneration == audioGeneration
+                                && self.currentArenaEntity === arena
+                                && self.currentCharacterEntity === player
+                                && self.currentEnemyEntity === enemy
+                        }
+                    )
+                }
                 // Impacto = Kamehameha; Técnica = socos com slashes e bursts anime (5.3B.2).
                 if selectedCard?.referenceImageName == "goku_cardgame",
                    playerMove == .impact, playerDuration > 0,

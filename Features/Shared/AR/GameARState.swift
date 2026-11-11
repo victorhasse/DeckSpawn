@@ -38,6 +38,17 @@ struct FloatingDamageEvent: Identifiable {
 
 final class GameARState: ObservableObject {
 
+    // Presentation only: does not change battle timers or AR anchors.
+    @Published private(set) var stageRibbonCue: StageRibbonCue = .ambient
+    var onStageRibbonCueChanged: ((StageRibbonCue) -> Void)?
+
+    func setStageRibbonCue(_ cue: StageRibbonCue) {
+        guard stageRibbonCue != cue else { return }
+        stageRibbonCue = cue
+        onStageRibbonCueChanged?(cue)
+    }
+
+
     // Ativa efeitos experimentais somente nas batalhas singleplayer.
     private(set) var singlePlayerEffectsEnabled = false
 
@@ -112,6 +123,7 @@ final class GameARState: ObservableObject {
         onPrepareBattle = nil
         onPrepareRematch = nil
         onBattleTurnAnimation = nil
+        onStageRibbonCueChanged = nil
         clearFloatingDamage()
     }
 
@@ -243,6 +255,7 @@ final class GameARState: ObservableObject {
     }
 
     func resetForNewSession() {
+        setStageRibbonCue(.ambient)
         singlePlayerEffectsEnabled = false
         clearFloatingDamage()
         activeARCoordinatorID = nil
@@ -259,6 +272,7 @@ final class GameARState: ObservableObject {
         onPrepareBattle = nil
         onPrepareRematch = nil
         onBattleTurnAnimation = nil
+        onStageRibbonCueChanged = nil
     }
 }
 

@@ -59,12 +59,14 @@ struct SinglePlayerView: View {
         .onAppear {
 
             connectBattleAnimations()
+            syncStageRibbon()
 
         }
 
         .onDisappear {
 
             gameFlow.onBattleTurnResolved = nil
+            arState.setStageRibbonCue(.ambient)
 
         }
 
@@ -87,9 +89,27 @@ struct SinglePlayerView: View {
                 gameFlow.enemySummonDidFinish()
 
             }
+            syncStageRibbon()
 
         }
 
+        .onChange(of: gameFlow.isShowingVersus) { _, _ in
+            syncStageRibbon()
+        }
+        .onChange(of: gameFlow.battleCountdown) { _, value in
+            // The countdown ends immediately before isBattleStarted becomes true.
+            // Ignore this intermediate nil to keep 1 -> FIGHT continuous.
+            if value != nil { syncStageRibbon() }
+        }
+        .onChange(of: gameFlow.isBattleStarted) { _, _ in
+            syncStageRibbon()
+        }
+        .onChange(of: gameFlow.isResolvingTurn) { _, _ in
+            syncStageRibbon()
+        }
+        .onChange(of: gameFlow.battleState?.winner != nil) { _, _ in
+            syncStageRibbon()
+        }
         .onChange(of: arState.battlePreparationFailureEvent) { _, event in
             guard let event,
                   gameFlow.singlePlayerPhase == .summoningEnemy else { return }
@@ -143,6 +163,25 @@ struct SinglePlayerView: View {
 
         }
 
+    }
+
+    // The battle clock belongs to GameFlowState; the stage simply displays it.
+    private func syncStageRibbon() {
+        guard gameFlow.screen == .singlePlayer,
+              gameFlow.singlePlayerPhase == .battleReady,
+              arState.phase == .battleReady else {
+            arState.setStageRibbonCue(.ambient)
+            return
+        }
+        if gameFlow.battleState?.winner != nil {
+            arState.setStageRibbonCue(.result)
+        } else if gameFlow.isShowingVersus {
+            arState.setStageRibbonCue(.versus)
+        } else if let number = gameFlow.battleCountdown {
+            arState.setStageRibbonCue(.countdown(number))
+        } else if gameFlow.isBattleStarted {
+            arState.setStageRibbonCue(gameFlow.isResolvingTurn ? .action : .battle)
+        }
     }
 
     @ViewBuilder
@@ -920,13 +959,7 @@ private struct BattleHUDOverlay: View {
                 }
             }
 
-            if let countdown = gameFlow.battleCountdown {
-                countdownPanel(countdown)
-                    .transition(.scale(scale: 0.88).combined(with: .opacity))
-                    .zIndex(1)
-            }
         }
-        .animation(.easeInOut(duration: 0.22), value: gameFlow.battleCountdown == nil)
     }
 
     private func roundBanner(round: Int, finished: Bool) -> some View {
@@ -940,7 +973,8 @@ private struct BattleHUDOverlay: View {
                 }
                 .font(.system(size: 11, weight: .black, design: .rounded))
 
-                if let message = gameFlow.lastTurnMessage {
+                if gameFlow.battleCountdown == nil,
+                   let message = gameFlow.lastTurnMessage {
                     // The battle engine has already localized this dynamic message.
                     Text(message)
                         .font(.system(size: 11, weight: .medium))
@@ -993,65 +1027,6 @@ private struct BattleHUDOverlay: View {
         .accessibilityLabel("\(gameFlow.turnSecondsRemaining)s")
     }
 
-    private func countdownPanel(_ seconds: Int) -> some View {
-        VStack(spacing: 12) {
-            Text("PREPARE-SE")
-                .font(.system(size: 13, weight: .black))
-                .tracking(2)
-                .foregroundStyle(BattleTheme.cyan)
-            ZStack {
-                Circle()
-                    .stroke(BattleTheme.violet.opacity(0.30), lineWidth: 3)
-                BattleCountdownProgressRing()
-                Text("\(seconds)")
-                    .font(.system(size: 76, weight: .black, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(.white)
-                    .id(seconds)
-                    .transition(.opacity.combined(with: .scale))
-            }
-            .frame(width: 152, height: 152)
-            .shadow(color: BattleTheme.cyan.opacity(0.40), radius: 18)
-        }
-        .padding(29)
-        .background(BattleTheme.ink.opacity(0.94), in: RoundedRectangle(cornerRadius: 30))
-        .overlay {
-            RoundedRectangle(cornerRadius: 30)
-                .stroke(
-                    LinearGradient(colors: [BattleTheme.cyan, BattleTheme.violet], startPoint: .topLeading, endPoint: .bottomTrailing),
-                    lineWidth: 1.5
-                )
-        }
-        .shadow(color: .black.opacity(0.45), radius: 25)
-    }
-}
-
-
-// Barra circular independente dos números: avança continuamente pelos 3 segundos
-// sem reiniciar sua animação quando o texto muda de 3 para 2 e depois para 1.
-private struct BattleCountdownProgressRing: View {
-    @State private var progress: CGFloat = 1.0
-
-    var body: some View {
-        Circle()
-            .trim(from: 0, to: progress)
-            .stroke(
-                AngularGradient(
-                    colors: [BattleTheme.cyan, BattleTheme.violet, BattleTheme.cyan],
-                    center: .center
-                ),
-                style: StrokeStyle(lineWidth: 5, lineCap: .round)
-            )
-            .rotationEffect(.degrees(-90))
-            .onAppear {
-                // O anel comeca cheio e esvazia ate a batalha iniciar.
-                // O @State pertence ao anel (nao ao texto, que usa .id(seconds)).
-                progress = 1.0
-                withAnimation(.linear(duration: Double(BattleRules.startCountdownSeconds))) {
-                    progress = 0.0
-                }
-            }
-    }
 }
 
 private struct FighterHPCard: View {
