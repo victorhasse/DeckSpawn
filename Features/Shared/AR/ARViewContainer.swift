@@ -338,6 +338,8 @@ extension ARViewContainer {
         private var floatingDamageGeneration = 0
         // Efeitos 3D temporarios, sem novos USDZ ou processamento de particulas.
         private let battleEffects = BattleEffectManager()
+        // Spider-Man Technique (web) and Impact (capoeira), independent of Goku VFX.
+        private let spiderEffects = SpiderManEffectManager()
         // Efeitos universais de Guarda, independentes dos VFX do Goku.
         private let guardEffects = GuardShieldEffectManager()
         // Faixa lateral do palco, com marca e confronto atual.
@@ -394,6 +396,7 @@ extension ARViewContainer {
             battleAudioGeneration += 1
             floatingDamageGeneration += 1
             battleEffects.cancelAll()
+            spiderEffects.cancelAll()
             guardEffects.cancelAll()
             stageRibbon.reset()
             assetLoadGeneration += 1
@@ -1379,6 +1382,7 @@ extension ARViewContainer {
             battleAudioGeneration += 1
             floatingDamageGeneration += 1
             battleEffects.cancelAll()
+            spiderEffects.cancelAll()
             guardEffects.cancelAll()
             state.clearFloatingDamage()
             _ = playCharacterAnimation(.idle, on: player)
@@ -2790,6 +2794,7 @@ extension ARViewContainer {
         private func clearCurrentArena() {
 
             battleEffects.cancelAll()
+            spiderEffects.cancelAll()
             guardEffects.cancelAll()
             stageRibbon.reset()
             currentEnemyCardName = nil
@@ -4571,6 +4576,7 @@ extension ARViewContainer {
 
             // Elimina efeitos restantes da rodada anterior antes de criar novos.
             battleEffects.cancelAll()
+            spiderEffects.cancelAll()
             guardEffects.cancelAll()
 
             let playerDuration =
@@ -4743,6 +4749,82 @@ extension ARViewContainer {
                         scene: scene,
                         controller: controller,
                         clipDuration: enemyDuration,
+                        reactionDelay: reactionDelay,
+                        hitsDefender: damage?.target == .player && (damage?.amount ?? 0) > 0,
+                        cameraRotation: arView?.cameraTransform.rotation,
+                        isValid: { [weak self, weak player, weak enemy, weak arena] in
+                            guard let self, let player, let enemy, let arena else { return false }
+                            return self.isCurrentSession
+                                && self.battleAudioGeneration == audioGeneration
+                                && self.currentArenaEntity === arena
+                                && self.currentCharacterEntity === player
+                                && self.currentEnemyEntity === enemy
+                        }
+                    )
+                }
+                // Spider-Man: both the player's and CPU's VFX use their own
+                // active sequences. Neither changes damage or guard rules.
+                if selectedCard?.referenceImageName == "spiderman_cardgame",
+                   playerMove == .technique, playerDuration > 0,
+                   let controller = animationPlaybackControllers[ObjectIdentifier(player)] {
+                    spiderEffects.playTechnique(
+                        attacker: player, defender: enemy, arena: arena, scene: scene,
+                        controller: controller, clipDuration: playerDuration,
+                        reactionDelay: reactionDelay,
+                        hitsDefender: damage?.target == .enemy && (damage?.amount ?? 0) > 0,
+                        isValid: { [weak self, weak player, weak enemy, weak arena] in
+                            guard let self, let player, let enemy, let arena else { return false }
+                            return self.isCurrentSession
+                                && self.battleAudioGeneration == audioGeneration
+                                && self.currentArenaEntity === arena
+                                && self.currentCharacterEntity === player
+                                && self.currentEnemyEntity === enemy
+                        }
+                    )
+                }
+                if currentEnemyCardName == "spiderman_cardgame",
+                   enemyMove == .technique, enemyDuration > 0,
+                   let controller = animationPlaybackControllers[ObjectIdentifier(enemy)] {
+                    spiderEffects.playTechnique(
+                        attacker: enemy, defender: player, arena: arena, scene: scene,
+                        controller: controller, clipDuration: enemyDuration,
+                        reactionDelay: reactionDelay,
+                        hitsDefender: damage?.target == .player && (damage?.amount ?? 0) > 0,
+                        isValid: { [weak self, weak player, weak enemy, weak arena] in
+                            guard let self, let player, let enemy, let arena else { return false }
+                            return self.isCurrentSession
+                                && self.battleAudioGeneration == audioGeneration
+                                && self.currentArenaEntity === arena
+                                && self.currentCharacterEntity === player
+                                && self.currentEnemyEntity === enemy
+                        }
+                    )
+                }
+                if selectedCard?.referenceImageName == "spiderman_cardgame",
+                   playerMove == .impact, playerDuration > 0,
+                   let controller = animationPlaybackControllers[ObjectIdentifier(player)] {
+                    spiderEffects.playImpact(
+                        attacker: player, defender: enemy, arena: arena, scene: scene,
+                        controller: controller, clipDuration: playerDuration,
+                        reactionDelay: reactionDelay,
+                        hitsDefender: damage?.target == .enemy && (damage?.amount ?? 0) > 0,
+                        cameraRotation: arView?.cameraTransform.rotation,
+                        isValid: { [weak self, weak player, weak enemy, weak arena] in
+                            guard let self, let player, let enemy, let arena else { return false }
+                            return self.isCurrentSession
+                                && self.battleAudioGeneration == audioGeneration
+                                && self.currentArenaEntity === arena
+                                && self.currentCharacterEntity === player
+                                && self.currentEnemyEntity === enemy
+                        }
+                    )
+                }
+                if currentEnemyCardName == "spiderman_cardgame",
+                   enemyMove == .impact, enemyDuration > 0,
+                   let controller = animationPlaybackControllers[ObjectIdentifier(enemy)] {
+                    spiderEffects.playImpact(
+                        attacker: enemy, defender: player, arena: arena, scene: scene,
+                        controller: controller, clipDuration: enemyDuration,
                         reactionDelay: reactionDelay,
                         hitsDefender: damage?.target == .player && (damage?.amount ?? 0) > 0,
                         cameraRotation: arView?.cameraTransform.rotation,
