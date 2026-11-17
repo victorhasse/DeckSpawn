@@ -2,7 +2,7 @@ import Foundation
 
 /// Resolves Mixamo hand/foot chains, with flat names or full USD skeleton paths.
 /// No indices or rest-pose positions are hardcoded for Spider-Man's assets.
-struct SpiderManJointRig {
+nonisolated struct SpiderManJointRig {
     enum Joint: CaseIterable, Hashable {
         case leftHand, rightHand, leftFoot, rightFoot
 

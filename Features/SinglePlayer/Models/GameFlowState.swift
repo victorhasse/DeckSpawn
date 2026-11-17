@@ -92,7 +92,6 @@ final class GameFlowState: ObservableObject {
     private var battleGeneration = 0
     // The VS intro must never outlive its battle.
     private var versusGeneration = 0
-    private let versusDuration: TimeInterval = 2.5
     private var roundCompletionGate: RoundCompletionGate?
 
     func startSinglePlayer() {
@@ -199,7 +198,7 @@ final class GameFlowState: ObservableObject {
         battleCountdown = nil
         lastTurnMessage = nil
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + versusDuration) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + BattleRules.versusDuration) { [weak self] in
             guard let self,
                   self.versusGeneration == generation,
                   self.screen == .singlePlayer,

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct MultiplayerView: View {
 
@@ -60,6 +61,8 @@ struct MultiplayerView: View {
 
     private var showingCodeEntry = false
 
+    @State private var copiedNetworkDiagnostics = false
+
     var body: some View {
 
         ZStack {
@@ -104,10 +107,13 @@ struct MultiplayerView: View {
 
                             page = .hostLobby
 
-                        } else {
+                        } else if service.connectionState == .connected {
 
                             page = .guestLobby
 
+                        } else {
+                            service.leaveJoinedRoom()
+                            page = .home
                         }
 
                     }
@@ -165,9 +171,9 @@ struct MultiplayerView: View {
             newState in
 
             if newState == .connected {
-
                 page = .guestLobby
-
+            } else if case .failed = newState, page == .guestLobby {
+                page = .home
             }
 
         }
@@ -739,59 +745,29 @@ struct MultiplayerView: View {
             )
 
             if service.discoveredRooms.isEmpty {
-
                 Spacer()
-
-                ProgressView()
-
-                    .tint(.white)
-
-                Text(
-
-                    "Procurando salas..."
-
-                )
-
-                .font(.headline)
-
-                .foregroundStyle(
-
-                    .white
-
-                )
-
-                Text(
-
-                    "Os dois iPhones precisam permitir acesso à rede local."
-
-                )
-
-                .font(.caption)
-
-                .foregroundStyle(
-
-                    .white.opacity(
-
-                        0.55
-
-                    )
-
-                )
-
-                .multilineTextAlignment(
-
-                    .center
-
-                )
-
-                .padding(
-
-                    .horizontal,
-
-                    30
-
-                )
-
+                if service.discoveryIsSearching || service.connectionState == .connecting {
+                    ProgressView().tint(.white)
+                }
+                Text(service.statusMessage ?? DeckSpawnL10n.text("Nenhuma sala disponível. Tente atualizar a busca."))
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                Text("Os dois iPhones precisam permitir acesso à rede local.")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.55))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 30)
+                Button {
+                    copiedNetworkDiagnostics = false
+                    service.startBrowsing()
+                } label: {
+                    Label("ATUALIZAR BUSCA", systemImage: "arrow.clockwise")
+                        .font(.headline)
+                }
+                .buttonStyle(.bordered)
+                .tint(.white)
+                .disabled(service.connectionState == .connecting)
                 Spacer()
 
             } else {
@@ -1315,21 +1291,23 @@ struct MultiplayerView: View {
                 }
 
             } else {
-
-                ProgressView(
-
-                    "Criando sala..."
-
-                )
-
-                .tint(.white)
-
-                .foregroundStyle(
-
-                    .white
-
-                )
-
+                if case .failed = service.connectionState {
+                    Text(service.statusMessage ?? DeckSpawnL10n.text("Tempo esgotado ao criar a sala."))
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                    Button("TENTAR NOVAMENTE") {
+                        copiedNetworkDiagnostics = false
+                        service.createRoom(name: roomName, privacy: roomPrivacy)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.white)
+                } else {
+                    ProgressView()
+                        .tint(.white)
+                    Text(service.statusMessage ?? DeckSpawnL10n.text("Criando sala..."))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                }
             }
 
             Spacer()
@@ -2095,6 +2073,23 @@ struct MultiplayerView: View {
             }
 
             Spacer()
+
+            #if DEBUG
+            if page == .browseRooms || page == .hostLobby || page == .guestLobby {
+                Button {
+                    service.recordPreparationDiagnostic("BONJOUR SNAPSHOT state=\(service.connectionState) rooms=\(service.discoveredRooms.count)")
+                    UIPasteboard.general.string = service.preparationDiagnostics.joined(separator: "\n")
+                    copiedNetworkDiagnostics = true
+                } label: {
+                    Image(systemName: copiedNetworkDiagnostics ? "checkmark" : "doc.on.doc")
+                        .foregroundStyle(.white)
+                        .frame(width: 42, height: 42)
+                        .background(Color.white.opacity(0.10))
+                        .clipShape(Circle())
+                }
+                .accessibilityLabel("Copiar diagnóstico")
+            }
+            #endif
 
         }
 

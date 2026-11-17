@@ -79,8 +79,14 @@ struct BattleDamage: Equatable {
     let amount: Int
 
     static func between(before: BattleState, after: BattleState) -> BattleDamage? {
-        let lostByPlayer = max(0, before.playerHP - after.playerHP)
-        let lostByEnemy = max(0, before.enemyHP - after.enemyHP)
+        between(playerBefore: before.playerHP, enemyBefore: before.enemyHP,
+                playerAfter: after.playerHP, enemyAfter: after.enemyHP)
+    }
+
+    static func between(playerBefore: Int, enemyBefore: Int,
+                        playerAfter: Int, enemyAfter: Int) -> BattleDamage? {
+        let lostByPlayer = max(0, playerBefore - playerAfter)
+        let lostByEnemy = max(0, enemyBefore - enemyAfter)
 
         // A draw inflicts no damage. The current battle engine only damages
         // one fighter per round; avoid displaying ambiguous double damage.

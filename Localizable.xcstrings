@@ -133,6 +133,16 @@
         }
       }
     },
+    "A batalha será encerrada e você voltará à sala." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The battle will end and you will return to the room."
+          }
+        }
+      }
+    },
     "A batalha será encerrada e você voltará ao menu principal." : {
       "localizations" : {
         "en" : {
@@ -244,6 +254,17 @@
         }
       }
     },
+    "Acesso à rede local negado. Permita o acesso nos Ajustes do iPhone." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Local network access denied. Allow access in iPhone Settings."
+          }
+        }
+      }
+    },
     "Adversário" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -256,7 +277,6 @@
       }
     },
     "ADVERSÁRIO" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -340,6 +360,17 @@
         }
       }
     },
+    "Aguardando rede local: %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for local network: %@"
+          }
+        }
+      }
+    },
     "Ajustes da experiência AR" : {
       "localizations" : {
         "en" : {
@@ -378,6 +409,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ATTACK"
+          }
+        }
+      }
+    },
+    "ATUALIZAR BUSCA" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "REFRESH SEARCH"
           }
         }
       }
@@ -640,6 +681,17 @@
         }
       }
     },
+    "Copiar diagnóstico" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy diagnostics"
+          }
+        }
+      }
+    },
     "CPU" : {
       "localizations" : {
         "en" : {
@@ -651,6 +703,7 @@
       }
     },
     "Criando sala..." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1354,6 +1407,17 @@
         }
       }
     },
+    "Não foi possível preparar a arena. Volte à sala e tente novamente." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not prepare the arena. Return to the room and try again."
+          }
+        }
+      }
+    },
     "Não foi possível preparar o pedido de entrada." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1409,6 +1473,17 @@
         }
       }
     },
+    "Nenhuma sala disponível. Tente atualizar a busca." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No rooms available. Try refreshing the search."
+          }
+        }
+      }
+    },
     "NOME DA SALA" : {
       "localizations" : {
         "en" : {
@@ -1451,6 +1526,17 @@
         }
       }
     },
+    "O adversário saiu ou cancelou a seleção. Volte à sala e tente novamente." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your opponent left or canceled their selection. Return to the room and try again."
+          }
+        }
+      }
+    },
     "O adversário também está pronto." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1489,6 +1575,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Both iPhones must allow access to the local network."
+          }
+        }
+      }
+    },
+    "Partida interrompida" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Match interrupted"
           }
         }
       }
@@ -1749,6 +1846,7 @@
       }
     },
     "Procurando salas..." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -2010,6 +2108,17 @@
         }
       }
     },
+    "Salas encontradas sem dados compatíveis. Atualize o jogo nos dois iPhones." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rooms found without compatible data. Update the game on both iPhones."
+          }
+        }
+      }
+    },
     "SINGLEPLAYER" : {
       "localizations" : {
         "en" : {
@@ -2073,6 +2182,39 @@
         }
       }
     },
+    "Tempo esgotado ao criar a sala." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creating the room timed out."
+          }
+        }
+      }
+    },
+    "Tempo esgotado ao entrar na sala." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Joining the room timed out."
+          }
+        }
+      }
+    },
+    "Tempo esgotado ao preparar a arena. Volte à sala e tente novamente." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arena preparation timed out. Return to the room and try again."
+          }
+        }
+      }
+    },
     "Tempo esgotado. %@ foi escolhido automaticamente." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2112,6 +2254,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Try again"
+          }
+        }
+      }
+    },
+    "TENTAR NOVAMENTE" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TRY AGAIN"
           }
         }
       }
@@ -2283,6 +2435,7 @@
       }
     },
     "Voltar" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

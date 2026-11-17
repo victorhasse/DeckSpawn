@@ -6,6 +6,7 @@ import UIKit
 struct BattleVersusOverlay: View {
     let player: CardDefinition
     let opponent: CardDefinition
+    var opponentTitle: LocalizedStringKey = "CPU"
 
     @State private var appeared = false
 
@@ -39,7 +40,7 @@ struct BattleVersusOverlay: View {
                             .shadow(color: .cyan.opacity(0.8), radius: 14)
                             .scaleEffect(appeared ? 1.0 : 0.6)
                             .accessibilityHidden(true)
-                        contender(opponent, side: "CPU", alignment: .trailing, textAlignment: .trailing, accent: .purple)
+                        contender(opponent, side: opponentTitle, alignment: .trailing, textAlignment: .trailing, accent: .purple)
                             .offset(x: appeared ? 0 : 40)
                     }
                     .padding(.horizontal, 14)

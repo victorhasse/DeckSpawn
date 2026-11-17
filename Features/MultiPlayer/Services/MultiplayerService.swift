@@ -5,6 +5,7 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
   static let serviceType = "_cardarenaar._tcp"
   @Published private(set) var hostedRoom: HostedRoom?
   @Published private(set) var discoveredRooms: [DiscoveredRoom] = []
+  @Published private(set) var discoveryIsSearching = false
   @Published private(set) var connectionState: MultiplayerConnectionState = .idle
   @Published private(set) var guestConnected = false
   @Published private(set) var statusMessage: String?
@@ -33,7 +34,9 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
         BattleMove,
         BattleMove,
         BattleRoundResult,
-        BattleWinner?
+        BattleWinner?,
+        BattleDamage?,
+        @escaping () -> Void
       ) -> Void
     )?
   /// Chamado quando o host confirma o vencedor da partida.
@@ -41,16 +44,59 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
   /// true = vitoria local; false = derrota local.
   var onBattleResultConfirmed: ((Bool) -> Void)?
 
-  private let queue = DispatchQueue(
-    label: "CardArenaAR.Multiplayer",
-    qos: .userInitiated
-  )
+  // NWConnection/NWBrowser callbacks and published game state share one queue.
+  // Network I/O remains asynchronous.
+  private let queue = DispatchQueue.main
+  private var pendingIncomingConnections: [ObjectIdentifier: NWConnection] = [:]
+  private static let protocolVersion = "6"
+  // Restore proximity discovery in all configurations. For a deliberate
+  // infrastructure-only experiment, set this to true on both phones.
+  // Do not require a specific interface type during Bonjour discovery.
+  private static let diagnosticLANOnly = false
+  private var lastReceivedAt = ContinuousClock.now
+  private var guestHandshakeStarted = false
+  private var incomingHandshakes: Set<ObjectIdentifier> = []
+
+  private static func tcpParameters() -> NWParameters {
+    let tcp = NWProtocolTCP.Options()
+    tcp.noDelay = true
+    tcp.enableKeepalive = true
+    tcp.keepaliveIdle = 5
+    tcp.keepaliveInterval = 5
+    tcp.keepaliveCount = 4
+    let parameters = NWParameters(tls: nil, tcp: tcp)
+    parameters.includePeerToPeer = !diagnosticLANOnly
+    return parameters
+  }
   private var listener: NWListener?
   private var browser: NWBrowser?
   private var hostConnection: NWConnection?
   private var guestConnection: NWConnection?
   private var battleHasStarted = false
   private var battleClockGeneration = 0
+  private var roundGate: MultiplayerRoundGate?
+  private var pendingNextRound: Int?
+  // Keep the most recent preparation events available even when a phone is
+  // not attached to Xcode. No network addresses or room codes are recorded.
+  private(set) var preparationDiagnostics: [String] = []
+
+  func recordPreparationDiagnostic(_ event: String) {
+    #if DEBUG
+    let role = (isHost || listener != nil || event.hasPrefix("BONJOUR create")) ? "host" : "guest"
+    let time = String(format: "%.3f", Date().timeIntervalSince1970)
+    let line = "[Multiplayer][\(role)] \(time) \(event) | local=\(localCardID ?? "-") ready=\(localReady) arena=\(localArenaReady) | remote=\(remoteCardID ?? "-") ready=\(remoteReady) arena=\(remoteArenaReady) | battle=\(battlePhase)"
+    preparationDiagnostics.append(line)
+    if preparationDiagnostics.count > 400 {
+      preparationDiagnostics.removeFirst(preparationDiagnostics.count - 400)
+    }
+    print(line)
+    #endif
+  }
+
+  // Idempotent: safe to reevaluate while the selection screen is visible.
+  func reconcileBattleStart() {
+    tryBeginBattleAsHost()
+  }
   var isHost: Bool {
     hostedRoom != nil
   }
@@ -139,6 +185,7 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
     privacy: RoomPrivacy
   ) {
     stopAll()
+    preparationDiagnostics.removeAll()
     let cleanName =
       name.trimmingCharacters(
         in: .whitespacesAndNewlines
@@ -160,9 +207,10 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
       privacy: privacy,
       joinCode: joinCode
     )
+    recordPreparationDiagnostic("BONJOUR create version=\(Self.protocolVersion) peer=\(!Self.diagnosticLANOnly)")
+    statusMessage = DeckSpawnL10n.text("Criando sala...")
     do {
-      let parameters = NWParameters.tcp
-      parameters.includePeerToPeer = true
+      let parameters = Self.tcpParameters()
       let listener =
         try NWListener(
           using: parameters
@@ -171,7 +219,7 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
         NWTXTRecord([
           "roomID": roomID,
           "privacy": privacy.rawValue,
-          "version": "3",
+          "version": Self.protocolVersion,
         ])
       listener.service =
         NWListener.Service(
@@ -181,38 +229,61 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
           txtRecord: txtRecord
         )
       listener.stateUpdateHandler = {
-        [weak self] state in
-        guard let self else {
+        [weak self, weak listener] state in
+        guard let self, let listener, self.listener === listener else {
           return
         }
+        self.recordPreparationDiagnostic("BONJOUR listener state=\(state)")
         switch state {
         case .ready:
-          DispatchQueue.main.async {
-            self.hostedRoom = room
-            self.connectionState = .hosting
-            self.statusMessage =
-              DeckSpawnL10n.text("Sala criada. Aguardando jogador...")
-          }
+          guard self.listener != nil else { return }
+          self.hostedRoom = room
+          self.connectionState = .hosting
+          self.statusMessage =
+            DeckSpawnL10n.text("Sala criada. Aguardando jogador...")
+        case .waiting(let error):
+          self.statusMessage = self.bonjourWaitingMessage(error)
         case .failed(let error):
           self.publishFailure(
             DeckSpawnL10n.format("Não foi possível criar a sala: %@", error.localizedDescription)
           )
           self.stopHosting()
+          self.hostedRoom = nil
+          self.clearPlayerSyncState()
         default:
           break
         }
       }
+      listener.serviceRegistrationUpdateHandler = { [weak self, weak listener] change in
+        guard let self, let listener, self.listener === listener else { return }
+        switch change {
+        case .add: self.recordPreparationDiagnostic("BONJOUR service registered")
+        case .remove: self.recordPreparationDiagnostic("BONJOUR service removed")
+        @unknown default: self.recordPreparationDiagnostic("BONJOUR registration changed")
+        }
+      }
       listener.newConnectionHandler = {
-        [weak self] connection in
-        self?.handleIncomingConnection(
+        [weak self, weak listener] connection in
+        guard let self, let listener, self.listener === listener else {
+          connection.cancel()
+          return
+        }
+        self.handleIncomingConnection(
           connection,
           room: room
         )
       }
       self.listener = listener
-      listener.start(
-        queue: queue
-      )
+      listener.start(queue: queue)
+      queue.asyncAfter(deadline: .now() + 15) { [weak self, weak listener] in
+        guard let self, let listener, self.listener === listener,
+              self.hostedRoom == nil else { return }
+        self.recordPreparationDiagnostic("BONJOUR listener setup timed out")
+        let message = self.statusMessage ?? DeckSpawnL10n.text("Tempo esgotado ao criar a sala.")
+        self.stopHosting()
+        self.publishFailure(message == DeckSpawnL10n.text("Criando sala...")
+          ? DeckSpawnL10n.text("Tempo esgotado ao criar a sala.") : message)
+      }
     } catch {
       publishFailure(
         DeckSpawnL10n.format("Não foi possível criar a sala: %@", error.localizedDescription)
@@ -220,19 +291,23 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
     }
   }
   func deleteRoom() {
+    recordPreparationDiagnostic("LOCAL deleteRoom")
     stopHosting()
     resetCardSyncState()
-    DispatchQueue.main.async {
-      self.hostedRoom = nil
-      self.guestConnected = false
-      self.connectionState = .idle
-      self.statusMessage = nil
-    }
+    hostedRoom = nil
+    guestConnected = false
+    connectionState = .idle
+    statusMessage = nil
   }
   func startBrowsing() {
+    guard connectionState != .connecting, connectionState != .connected else { return }
     stopBrowsing()
+    connectionState = .browsing
+    discoveryIsSearching = true
+    statusMessage = DeckSpawnL10n.text("Procurando salas disponíveis...")
+    recordPreparationDiagnostic("BONJOUR browse version=\(Self.protocolVersion) peer=\(!Self.diagnosticLANOnly)")
     let parameters = NWParameters.tcp
-    parameters.includePeerToPeer = true
+    parameters.includePeerToPeer = !Self.diagnosticLANOnly
     let browser =
       NWBrowser(
         for:
@@ -243,19 +318,28 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
         using: parameters
       )
     browser.stateUpdateHandler = {
-      [weak self] state in
-      guard let self else {
+      [weak self, weak browser] state in
+      guard let self, let browser, self.browser === browser else {
         return
       }
+      self.recordPreparationDiagnostic("BONJOUR browser state=\(state)")
       switch state {
       case .ready:
-        DispatchQueue.main.async {
-          self.connectionState =
-            .browsing
-          self.statusMessage =
-            DeckSpawnL10n.text("Procurando salas disponíveis...")
+        guard self.connectionState != .connecting, self.connectionState != .connected else { return }
+        self.connectionState = .browsing
+        if self.discoveredRooms.isEmpty {
+          self.statusMessage = DeckSpawnL10n.text(self.discoveryIsSearching
+            ? "Procurando salas disponíveis..." : "Nenhuma sala disponível. Tente atualizar a busca.")
+        } else {
+          self.statusMessage = nil
         }
+      case .waiting(let error):
+        self.discoveredRooms = []
+        self.statusMessage = self.bonjourWaitingMessage(error)
       case .failed(let error):
+        guard self.connectionState != .connecting, self.connectionState != .connected else { return }
+        self.discoveryIsSearching = false
+        self.discoveredRooms = []
         self.publishFailure(
           DeckSpawnL10n.format("Não foi possível procurar salas: %@", error.localizedDescription)
         )
@@ -264,8 +348,8 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
       }
     }
     browser.browseResultsChangedHandler = {
-      [weak self] results, _ in
-      guard let self else {
+      [weak self, weak browser] results, _ in
+      guard let self, let browser, self.browser === browser else {
         return
       }
       let rooms =
@@ -282,47 +366,77 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
             )
             == .orderedAscending
         }
-      DispatchQueue.main.async {
-        self.discoveredRooms =
-          rooms
+      guard self.browser === browser else { return }
+      self.discoveredRooms = rooms
+      self.recordPreparationDiagnostic("BONJOUR results raw=\(results.count) compatible=\(rooms.count)")
+      if !rooms.isEmpty {
+        self.discoveryIsSearching = false
+        self.statusMessage = nil
+      } else if results.count > 0 {
+        self.discoveryIsSearching = false
+        self.statusMessage = DeckSpawnL10n.text("Salas encontradas sem dados compatíveis. Atualize o jogo nos dois iPhones.")
+      } else if !self.discoveryIsSearching, case .ready = browser.state {
+        self.statusMessage = DeckSpawnL10n.text("Nenhuma sala disponível. Tente atualizar a busca.")
       }
     }
     self.browser = browser
-    browser.start(
-      queue: queue
-    )
-  }
-  func stopBrowsing() {
-    browser?.cancel()
-    browser = nil
-    DispatchQueue.main.async {
-      self.discoveredRooms = []
+    browser.start(queue: queue)
+    queue.asyncAfter(deadline: .now() + 15) { [weak self, weak browser] in
+      guard let self, let browser, self.browser === browser,
+            self.discoveryIsSearching else { return }
+      self.discoveryIsSearching = false
+      guard self.discoveredRooms.isEmpty else { return }
+      self.recordPreparationDiagnostic("BONJOUR no compatible room after 15s; state=\(browser.state)")
+      if case .waiting(let error) = browser.state {
+        self.statusMessage = self.bonjourWaitingMessage(error)
+      } else if self.connectionState == .browsing {
+        self.statusMessage = DeckSpawnL10n.text("Nenhuma sala disponível. Tente atualizar a busca.")
+      }
+      // Keep listening for late advertisements; the UI no longer spins.
     }
+  }
+  private func bonjourWaitingMessage(_ error: NWError) -> String {
+    // kDNSServiceErr_PolicyDenied: Apple's TN3179 local network privacy check.
+    if case .dns(let code) = error, code == -65570 {
+      return DeckSpawnL10n.text("Acesso à rede local negado. Permita o acesso nos Ajustes do iPhone.")
+    }
+    return DeckSpawnL10n.format("Aguardando rede local: %@", error.localizedDescription)
+  }
+  func stopBrowsing(clearRooms: Bool = true) {
+    discoveryIsSearching = false
+    let oldBrowser = browser
+    browser = nil
+    oldBrowser?.cancel()
+    if clearRooms { discoveredRooms = [] }
   }
   func join(
     room: DiscoveredRoom,
     code: String?
   ) {
+    guard connectionState != .connecting, connectionState != .connected else { return }
+    stopBrowsing(clearRooms: false)
     guestConnection?.cancel()
     guestConnection = nil
+    guestHandshakeStarted = false
     resetCardSyncState()
-    DispatchQueue.main.async {
-      self.connectionState =
-        .connecting
-      self.statusMessage =
-        DeckSpawnL10n.format("Entrando em %@...", room.name)
-    }
-    let parameters =
-      NWParameters.tcp
-    parameters.includePeerToPeer =
-      true
+    connectionState = .connecting
+    statusMessage = DeckSpawnL10n.format("Entrando em %@...", room.name)
+    let parameters = Self.tcpParameters()
     let connection =
       NWConnection(
         to: room.endpoint,
         using: parameters
       )
-    guestConnection =
-      connection
+    guestConnection = connection
+    observeConnection(connection)
+    queue.asyncAfter(deadline: .now() + 12) { [weak self, weak connection] in
+      guard let self, let connection, self.guestConnection === connection,
+            self.connectionState == .connecting else { return }
+      self.guestConnection = nil
+      connection.cancel()
+      self.connectionState = .failed(DeckSpawnL10n.text("Tempo esgotado ao entrar na sala."))
+      self.statusMessage = DeckSpawnL10n.text("Tempo esgotado ao entrar na sala.")
+    }
     connection.stateUpdateHandler = {
       [weak self, weak connection] state in
       guard
@@ -331,14 +445,20 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
       else {
         return
       }
+      guard self.guestConnection === connection else { return }
+      self.recordPreparationDiagnostic("TCP state=\(state)")
       switch state {
       case .ready:
+        guard self.connectionState == .connecting, !self.guestHandshakeStarted else { return }
+        self.guestHandshakeStarted = true
         self.sendJoinRequest(
           through: connection,
           room: room,
           code: code
         )
       case .failed(let error):
+        self.recordPreparationDiagnostic("TCP failed: \(error)")
+        self.handleRemoteDisconnect(connection)
         self.publishFailure(
           DeckSpawnL10n.format("Falha ao entrar na sala: %@", error.localizedDescription)
         )
@@ -356,87 +476,68 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
     )
   }
   func leaveJoinedRoom() {
+    recordPreparationDiagnostic("LOCAL leaveJoinedRoom")
     guestConnection?.cancel()
     guestConnection = nil
     resetCardSyncState()
-    DispatchQueue.main.async {
-      self.connectionState =
-        .idle
-      self.statusMessage = nil
-    }
+    connectionState = .idle
+    statusMessage = nil
   }
   func stopAll() {
+    recordPreparationDiagnostic("LOCAL stopAll")
     stopBrowsing()
     stopHosting()
     guestConnection?.cancel()
     guestConnection = nil
     resetCardSyncState()
-    DispatchQueue.main.async {
-      self.hostedRoom = nil
-      self.guestConnected = false
-      self.connectionState = .idle
-      self.statusMessage = nil
-    }
+    hostedRoom = nil
+    guestConnected = false
+    connectionState = .idle
+    statusMessage = nil
   }
-  func updateLocalCard(
-    _ cardID: String?
-  ) {
-    DispatchQueue.main.async {
-      self.localCardID =
-        cardID
-      self.localReady =
-        false
-      self.localArenaReady =
-        false
-      self.resetBattleStateOnly()
-      self.sendCurrentPlayerState()
-    }
+  func updateLocalCard(_ cardID: String?) {
+    guard localCardID != cardID else { return }
+    localCardID = cardID
+    localReady = false
+    localArenaReady = false
+    resetBattleStateOnly()
+    sendCurrentPlayerState()
+    logPreparation("local card changed")
   }
-  func setLocalReady(
-    _ ready: Bool
-  ) {
-    DispatchQueue.main.async {
-      guard
-        self.localCardID != nil
-      else {
-        return
-      }
-      self.localReady =
-        ready
-      if !ready {
-        self.localArenaReady =
-          false
-        self.resetBattleStateOnly()
-      }
-      self.sendCurrentPlayerState()
-      self.tryBeginBattleAsHost()
+
+  func setLocalReady(_ ready: Bool) {
+    guard localCard != nil, localReady != ready else { return }
+    localReady = ready
+    if !ready {
+      localArenaReady = false
+      resetBattleStateOnly()
     }
+    sendCurrentPlayerState()
+    logPreparation("local ready changed")
+    tryBeginBattleAsHost()
   }
-  func setLocalArenaReady(
-    _ ready: Bool
-  ) {
-    DispatchQueue.main.async {
-      guard
-        self.localReady,
-        self.localCardID != nil
-      else {
-        return
-      }
-      self.localArenaReady =
-        ready
-      self.sendCurrentPlayerState()
-      self.tryBeginBattleAsHost()
-    }
+
+  func setLocalArenaReady(_ ready: Bool) {
+    guard localReady, localCard != nil, localArenaReady != ready else { return }
+    localArenaReady = ready
+    sendCurrentPlayerState()
+    logPreparation("local arena ready changed")
+    tryBeginBattleAsHost()
   }
+
   func resetLocalSelection() {
-    DispatchQueue.main.async {
-      self.localCardID = nil
-      self.localReady = false
-      self.localArenaReady = false
-      self.resetBattleStateOnly()
-      self.sendCurrentPlayerState()
-    }
+    recordPreparationDiagnostic("resetLocalSelection")
+    localCardID = nil
+    localReady = false
+    localArenaReady = false
+    resetBattleStateOnly()
+    sendCurrentPlayerState()
   }
+
+  private func logPreparation(_ event: String) {
+    recordPreparationDiagnostic(event)
+  }
+
   func submitLocalMove(
     _ move: BattleMove
   ) {
@@ -482,6 +583,10 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
     }
   }
   private func stopHosting() {
+    guestConnected = false
+    for connection in pendingIncomingConnections.values { connection.cancel() }
+    pendingIncomingConnections.removeAll()
+    incomingHandshakes.removeAll()
     hostConnection?.cancel()
     hostConnection = nil
     listener?.cancel()
@@ -511,12 +616,15 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
     {
       let values =
         txtRecord.dictionary
-      if let advertisedID =
-        values["roomID"]
-      {
-        roomID =
-          advertisedID
+      guard values["version"] == Self.protocolVersion else {
+        recordPreparationDiagnostic("BONJOUR ignored version=\(values["version"] ?? "missing") expected=\(Self.protocolVersion)")
+        return nil
       }
+      guard let advertisedID = values["roomID"], !advertisedID.isEmpty else {
+        recordPreparationDiagnostic("BONJOUR ignored missing roomID")
+        return nil
+      }
+      roomID = advertisedID
       if let rawPrivacy =
         values["privacy"],
         let advertisedPrivacy =
@@ -529,6 +637,10 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
           advertisedPrivacy
       }
     }
+    else {
+      recordPreparationDiagnostic("BONJOUR ignored missing TXT record")
+      return nil
+    }
     return DiscoveredRoom(
       id: roomID,
       name: name,
@@ -540,19 +652,14 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
     _ connection: NWConnection,
     room: HostedRoom
   ) {
-    if hostConnection != nil {
-      sendResponse(
-        JoinResponse(
-          accepted: false,
-          message:
-            "A sala já possui dois jogadores."
-        ),
-        through:
-          connection,
-        cancelAfterSend:
-          true
-      )
-      return
+    let identifier = ObjectIdentifier(connection)
+    pendingIncomingConnections[identifier] = connection
+    observeConnection(connection)
+    queue.asyncAfter(deadline: .now() + 10) { [weak self, weak connection] in
+      guard let self, let connection,
+            self.pendingIncomingConnections.removeValue(forKey: identifier) != nil else { return }
+      self.incomingHandshakes.remove(identifier)
+      connection.cancel()
     }
     connection.stateUpdateHandler = {
       [weak self, weak connection] state in
@@ -562,17 +669,22 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
       else {
         return
       }
+      guard self.pendingIncomingConnections[identifier] === connection || self.hostConnection === connection else { return }
+      self.recordPreparationDiagnostic("TCP state=\(state)")
       switch state {
       case .ready:
+        guard self.pendingIncomingConnections[identifier] === connection,
+              self.incomingHandshakes.insert(identifier).inserted else { return }
         self.receiveJoinRequest(
           from: connection,
           room: room
         )
-      case .failed,
-        .cancelled:
-        self.handleRemoteDisconnect(
-          connection
-        )
+      case .failed(let error):
+        self.recordPreparationDiagnostic("TCP failed: \(error)")
+        self.handleRemoteDisconnect(connection)
+        connection.cancel()
+      case .cancelled:
+        self.handleRemoteDisconnect(connection)
       default:
         break
       }
@@ -585,26 +697,20 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
     from connection: NWConnection,
     room: HostedRoom
   ) {
-    connection.receive(
-      minimumIncompleteLength: 1,
-      maximumLength: 4096
-    ) {
-      [weak self, weak connection]
-      data,
-      _,
-      _,
-      error in
-      guard
-        let self,
-        let connection
-      else {
+    receiveFrame(from: connection) { [weak self, weak connection] data in
+      guard let self, let connection,
+            self.pendingIncomingConnections.removeValue(forKey: ObjectIdentifier(connection)) != nil else { return }
+      self.incomingHandshakes.remove(ObjectIdentifier(connection))
+      guard data != nil else {
+        connection.cancel()
         return
       }
-      if let error {
-        self.publishFailure(
-          DeckSpawnL10n.format("Erro recebendo pedido de entrada: %@", error.localizedDescription)
+      guard self.hostConnection == nil, self.hostedRoom?.id == room.id else {
+        self.sendResponse(
+          JoinResponse(accepted: false, message: "A sala já possui dois jogadores."),
+          through: connection,
+          cancelAfterSend: true
         )
-        connection.cancel()
         return
       }
       guard
@@ -676,15 +782,12 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
         cancelAfterSend:
           false
       )
-      DispatchQueue.main.async {
-        self.guestConnected =
-          true
-        self.statusMessage =
-          DeckSpawnL10n.text("Jogador 2 conectado.")
-        self.beginReceivingWireMessages(
-          on: connection
-        )
-      }
+      guard self.hostConnection === connection else { return }
+      self.guestConnected = true
+      self.statusMessage = DeckSpawnL10n.text("Jogador 2 conectado.")
+      self.beginReceivingWireMessages(on: connection)
+      self.startHeartbeat(on: connection)
+      self.sendCurrentPlayerState()
     }
   }
   private func sendJoinRequest(
@@ -705,10 +808,7 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
       )
     guard
       let data =
-        try? JSONEncoder()
-        .encode(
-          request
-        )
+        try? MultiplayerFrame.encode(request)
     else {
       publishFailure(
         DeckSpawnL10n.text("Não foi possível preparar o pedido de entrada.")
@@ -727,7 +827,10 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
           else {
             return
           }
+          guard self.guestConnection === connection else { return }
           if let error {
+            self.guestConnection = nil
+            connection.cancel()
             self.publishFailure(
               DeckSpawnL10n.format("Erro enviando pedido de entrada: %@", error.localizedDescription)
             )
@@ -744,27 +847,8 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
     from connection: NWConnection,
     roomName: String
   ) {
-    connection.receive(
-      minimumIncompleteLength: 1,
-      maximumLength: 4096
-    ) {
-      [weak self, weak connection]
-      data,
-      _,
-      _,
-      error in
-      guard
-        let self,
-        let connection
-      else {
-        return
-      }
-      if let error {
-        self.publishFailure(
-          DeckSpawnL10n.format("Erro recebendo resposta da sala: %@", error.localizedDescription)
-        )
-        return
-      }
+    receiveFrame(from: connection) { [weak self, weak connection] data in
+      guard let self, let connection, self.guestConnection === connection else { return }
       guard
         let data,
         let response =
@@ -774,12 +858,15 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
             from: data
           )
       else {
+        self.guestConnection = nil
         self.publishFailure(
           DeckSpawnL10n.text("A sala enviou uma resposta inválida.")
         )
+        connection.cancel()
         return
       }
       DispatchQueue.main.async {
+        guard self.guestConnection === connection else { return }
         if response.accepted {
           self.connectionState =
             .connected
@@ -790,11 +877,13 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
           self.beginReceivingWireMessages(
             on: connection
           )
+          self.startHeartbeat(on: connection)
           self.sendCurrentPlayerState()
         } else {
           self.connectionState =
             .failed(DeckSpawnL10n.text(response.message))
           self.statusMessage = DeckSpawnL10n.text(response.message)
+          self.guestConnection = nil
           connection.cancel()
         }
       }
@@ -807,10 +896,7 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
   ) {
     guard
       let data =
-        try? JSONEncoder()
-        .encode(
-          response
-        )
+        try? MultiplayerFrame.encode(response)
     else {
       connection.cancel()
       return
@@ -860,138 +946,140 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
   private func sendWire(
     _ wire: MultiplayerWireMessage
   ) {
+    let isPreparation = wire.kind == MultiplayerWireKind.playerState
+      || wire.kind == MultiplayerWireKind.battleStart
+      || wire.kind == MultiplayerWireKind.heartbeat
     guard
       let connection =
         activeConnection
     else {
+      if isPreparation { recordPreparationDiagnostic("TX dropped \(wire.kind): no active connection") }
       return
     }
     guard
       let payload =
-        try? JSONEncoder()
-        .encode(
-          wire
-        )
+        try? MultiplayerFrame.encode(wire)
     else {
+      if isPreparation { recordPreparationDiagnostic("TX dropped \(wire.kind): encode failed") }
       return
     }
-    let count =
-      UInt32(
-        payload.count
-      )
-    var packet = Data()
-    packet.append(
-      UInt8(
-        (count >> 24)
-          & 0xFF
-      )
-    )
-    packet.append(
-      UInt8(
-        (count >> 16)
-          & 0xFF
-      )
-    )
-    packet.append(
-      UInt8(
-        (count >> 8)
-          & 0xFF
-      )
-    )
-    packet.append(
-      UInt8(
-        count
-          & 0xFF
-      )
-    )
-    packet.append(
-      payload
-    )
+    if isPreparation { recordPreparationDiagnostic("TX \(wire.kind)") }
     connection.send(
       content:
-        packet,
+        payload,
       completion:
         .contentProcessed {
-          [weak self] error in
+          [weak self, weak connection] error in
+          guard let self, let connection,
+                self.activeConnection === connection else { return }
           if let error {
-            self?.publishFailure(
-              DeckSpawnL10n.format("Erro sincronizando a partida: %@", error.localizedDescription)
-            )
+            self.recordPreparationDiagnostic("TX failed \(wire.kind): \(error.localizedDescription)")
+            self.handleRemoteDisconnect(connection)
+            connection.cancel()
+          } else if isPreparation {
+            self.recordPreparationDiagnostic("TX processed \(wire.kind)")
           }
         }
     )
   }
+  private func observeConnection(_ connection: NWConnection) {
+    recordPreparationDiagnostic("TCP mode=\(Self.diagnosticLANOnly ? "LAN_ONLY" : "PEER_ENABLED")")
+    connection.pathUpdateHandler = { [weak self, weak connection] path in
+      guard let self, let connection,
+            self.activeConnection === connection || self.pendingIncomingConnections[ObjectIdentifier(connection)] === connection else { return }
+      let interfaces = path.availableInterfaces.map { $0.name }.joined(separator: ",")
+      self.recordPreparationDiagnostic("TCP path=\(path.status) wifi=\(path.usesInterfaceType(.wifi)) interfaces=\(interfaces)")
+    }
+    connection.viabilityUpdateHandler = { [weak self, weak connection] viable in
+      guard let self, let connection,
+            self.activeConnection === connection || self.pendingIncomingConnections[ObjectIdentifier(connection)] === connection else { return }
+      self.recordPreparationDiagnostic("TCP viable=\(viable)")
+    }
+  }
+
+  private func startHeartbeat(on connection: NWConnection) {
+    lastReceivedAt = .now
+    scheduleHeartbeat(on: connection)
+  }
+
+  private func scheduleHeartbeat(on connection: NWConnection) {
+    queue.asyncAfter(deadline: .now() + 2) { [weak self, weak connection] in
+      guard let self, let connection, self.activeConnection === connection else { return }
+      if ContinuousClock.now - self.lastReceivedAt >= .seconds(30) {
+        self.recordPreparationDiagnostic("TCP heartbeat timeout: no inbound message for 30s")
+        self.handleRemoteDisconnect(connection)
+        connection.cancel()
+        return
+      }
+      if self.battlePhase == .waitingForArena {
+        // Reaffirm current state while scanning or waiting, even when
+        // nothing changes. This also acts as an application heartbeat.
+        self.sendCurrentPlayerState()
+      } else {
+        self.sendWire(MultiplayerWireMessage(
+          kind: MultiplayerWireKind.heartbeat, playerState: nil, battleStart: nil,
+          move: nil, roundStart: nil, roundResult: nil
+        ))
+      }
+      self.scheduleHeartbeat(on: connection)
+    }
+  }
+
   private var activeConnection:
     NWConnection?
   {
     hostConnection
       ?? guestConnection
   }
-  private func beginReceivingWireMessages(
-    on connection: NWConnection
+  private func receiveFrame(
+    from connection: NWConnection,
+    completion: @escaping (Data?) -> Void
   ) {
-    receiveExactly(
-      count: 4,
-      from: connection
-    ) {
-      [weak self, weak connection]
-      header in
-      guard
-        let self,
-        let connection,
-        let header,
-        header.count == 4
-      else {
+    receiveExactly(count: 4, from: connection) { [weak self, weak connection] header in
+      guard let self, let connection else { completion(nil); return }
+      guard let header else {
+        self.recordPreparationDiagnostic("RX header missing")
+        completion(nil)
         return
       }
-      let bytes =
-        [UInt8](
-          header
-        )
-      let length =
-        (UInt32(bytes[0]) << 24)
-        | (UInt32(bytes[1]) << 16)
-        | (UInt32(bytes[2]) << 8)
-        | UInt32(bytes[3])
-      guard
-        length > 0,
-        length <= 65_536
-      else {
-        connection.cancel()
+      guard let length = MultiplayerFrame.payloadLength(from: header) else {
+        self.recordPreparationDiagnostic("RX invalid header: \(header.map { String(format: "%02x", $0) }.joined())")
+        completion(nil)
         return
       }
-      self.receiveExactly(
-        count:
-          Int(length),
-        from:
-          connection
-      ) {
-        [weak self, weak connection]
-        payload in
-        guard
-          let self,
-          let connection,
-          let payload,
-          let wire =
-            try? JSONDecoder()
-            .decode(
-              MultiplayerWireMessage.self,
-              from: payload
-            )
-        else {
-          return
-        }
-        DispatchQueue.main.async {
-          self.handleWireMessage(
-            wire
-          )
-        }
-        self.beginReceivingWireMessages(
-          on: connection
-        )
+      self.receiveExactly(count: length, from: connection) { [weak self] payload in
+        if payload == nil { self?.recordPreparationDiagnostic("RX incomplete payload: expected \(length) bytes") }
+        completion(payload)
       }
     }
   }
+
+  private func beginReceivingWireMessages(on connection: NWConnection) {
+    receiveFrame(from: connection) { [weak self, weak connection] payload in
+      guard let self, let connection, self.activeConnection === connection else { return }
+      guard let payload else {
+        self.recordPreparationDiagnostic("RX interrupted: see TCP/header/payload error above")
+        self.handleRemoteDisconnect(connection)
+        connection.cancel()
+        return
+      }
+      do {
+        let wire = try JSONDecoder().decode(MultiplayerWireMessage.self, from: payload)
+        self.lastReceivedAt = .now
+        self.recordPreparationDiagnostic("RX \(wire.kind) bytes=\(payload.count)")
+        self.handleWireMessage(wire)
+      } catch {
+        self.recordPreparationDiagnostic("RX JSON decode failed: \(error)")
+        self.handleRemoteDisconnect(connection)
+        connection.cancel()
+        return
+      }
+      if self.activeConnection === connection {
+        self.beginReceivingWireMessages(on: connection)
+      }
+    }
+  }
+
   private func handleWireMessage(
     _ wire: MultiplayerWireMessage
   ) {
@@ -1003,29 +1091,35 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
       else {
         return
       }
-      remoteCardID =
-        state.cardID
-      remoteReady =
-        state.ready
-      remoteArenaReady =
-        state.arenaReady
+      let cardID = state.cardID.flatMap { CardDatabase.card(named: $0)?.id }
+      let ready = state.ready && cardID != nil
+      let arenaReady = state.arenaReady && ready
+      if remoteCardID != cardID { remoteCardID = cardID }
+      if remoteReady != ready { remoteReady = ready }
+      if remoteArenaReady != arenaReady { remoteArenaReady = arenaReady }
+      logPreparation("remote state received: wireCard=\(state.cardID ?? "-"), wireReady=\(state.ready), wireArena=\(state.arenaReady)")
       if battleHasStarted,
-        !state.ready
-          || state.cardID == nil
+        !remoteReady
       {
         resetBattleStateOnly()
         lastBattleMessage =
           DeckSpawnL10n.text("O adversário cancelou a seleção.")
       }
-      if isHost {
-        sendCurrentPlayerState()
-        tryBeginBattleAsHost()
-      }
+      if isHost { tryBeginBattleAsHost() }
+    case MultiplayerWireKind.heartbeat:
+      break
     case MultiplayerWireKind.battleStart:
+      recordPreparationDiagnostic("RX battleStart")
       guard
+        !isHost,
+        !battleHasStarted,
+        bothArenasReady,
         let message =
-          wire.battleStart
+          wire.battleStart,
+        message.hostCardID == remoteCardID,
+        message.guestCardID == localCardID
       else {
+        recordPreparationDiagnostic("RX battleStart rejected: host=\(isHost), started=\(battleHasStarted), bothArenas=\(bothArenasReady), packetHost=\(wire.battleStart?.hostCardID ?? "-"), packetGuest=\(wire.battleStart?.guestCardID ?? "-")")
         return
       }
       applyBattleStart(
@@ -1038,8 +1132,9 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
           wire.move,
         message.round
           == battleRound,
-        battlePhase
-          == .choosingMove,
+        (battlePhase == .choosingMove ||
+          (battlePhase == .countdown && battleCountdown == 1) ||
+          (battlePhase == .showingResult && pendingNextRound == nil)),
         guestMove == nil,
         let move =
           BattleMove(
@@ -1052,8 +1147,13 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
       guestMove =
         move
       resolveRoundIfPossibleAsHost()
+    case MultiplayerWireKind.animationsFinished:
+      guard isHost, let round = wire.animationsFinishedRound else { return }
+      markRoundGate(.guestFinished, round: round, generation: battleClockGeneration)
     case MultiplayerWireKind.roundStart:
       guard
+        !isHost,
+        battleHasStarted,
         let message =
           wire.roundStart
       else {
@@ -1064,6 +1164,8 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
       )
     case MultiplayerWireKind.roundResult:
       guard
+        !isHost,
+        battleHasStarted,
         let message =
           wire.roundResult
       else {
@@ -1079,6 +1181,7 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
   private func tryBeginBattleAsHost() {
     guard
       isHost,
+      guestConnected,
       !battleHasStarted,
       bothArenasReady,
       let hostCardID =
@@ -1098,6 +1201,7 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
     else {
       return
     }
+    logPreparation("host starting battle")
     battleHasStarted =
       true
     let startAt =
@@ -1162,37 +1266,35 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
       nil
     battleWinner =
       nil
-    battlePhase =
-      .countdown
-    battleCountdown =
-      message.countdownSeconds
+    battlePhase = .versus
+    battleCountdown = nil
     turnSecondsRemaining =
       message.turnDurationSeconds
     lastBattleMessage =
       DeckSpawnL10n.text("Prepare-se!")
+    recordPreparationDiagnostic("versus applied")
     battleClockGeneration += 1
     let generation =
       battleClockGeneration
-    let delay =
-      max(
-        0,
-        message.countdownStartsAt
-          - Date()
-          .timeIntervalSince1970
-      )
+    // The sender schedules at most 0.75 s ahead. A different device clock
+    // must not cause a countdown to wait for minutes.
+    let delay = max(0, min(0.75, message.countdownStartsAt - Date().timeIntervalSince1970))
     DispatchQueue.main.asyncAfter(
       deadline:
         .now()
         + delay
     ) { [weak self] in
-      self?.runBattleCountdown(
-        remaining:
-          message.countdownSeconds,
-        turnDuration:
-          message.turnDurationSeconds,
-        generation:
-          generation
-      )
+      guard let self, self.battleClockGeneration == generation,
+            self.battlePhase == .versus else { return }
+      DispatchQueue.main.asyncAfter(deadline: .now() + BattleRules.versusDuration) { [weak self] in
+        guard let self, self.battleClockGeneration == generation,
+              self.battlePhase == .versus else { return }
+        self.battleCountdown = message.countdownSeconds
+        self.battlePhase = .countdown
+        self.runBattleCountdown(remaining: message.countdownSeconds,
+                                turnDuration: message.turnDurationSeconds,
+                                generation: generation)
+      }
     }
   }
   private func runBattleCountdown(
@@ -1214,6 +1316,7 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
         .choosingMove
       lastBattleMessage =
         DeckSpawnL10n.text("Escolha sua ação.")
+      recordPreparationDiagnostic("countdown finished: choosing move")
       startTurnTimer(
         duration:
           turnDuration
@@ -1466,9 +1569,14 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
   private func applyRoundResult(
     _ result: MultiplayerRoundResultMessage
   ) {
-    // O resultado final so deve ser anunciado uma vez por batalha,
-    // mesmo que a rede repita o pacote de uma rodada.
-    let previouslyFinished = battleWinner != nil
+    guard battleHasStarted, battleWinner == nil, result.round == battleRound,
+          // Guest can receive a timeout result while still locally choosing.
+          battlePhase == .choosingMove else { return }
+    let damage = BattleDamage.between(
+      playerBefore: localHP, enemyBefore: remoteHP,
+      playerAfter: isHost ? result.hostHP : result.guestHP,
+      enemyAfter: isHost ? result.guestHP : result.hostHP
+    )
     let localizedResult = localizedRoundSummary(result)
     battleClockGeneration += 1
     hostHP =
@@ -1501,7 +1609,7 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
     // Nao envia "host venceu" diretamente ao SoundManager.
     // O host e o convidado convertem a mesma identidade vencedora
     // em vitoria/derrota LOCAL antes de reproduzir o audio.
-    if !previouslyFinished, let localWon = winnerIsLocal {
+    if let localWon = winnerIsLocal {
       onBattleResultConfirmed?(localWon)
     }
     let localMove = isHost ? hostMove : guestMove
@@ -1527,23 +1635,52 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
         GameHaptics.roundResult(roundResult, winner: localWinner)
       }
     }
-    publishBattleTurnAnimation()
+    let generation = battleClockGeneration
     if battleWinner != nil {
-      battlePhase =
-        .finished
-      turnSecondsRemaining =
-        0
+      battlePhase = .finished
+      turnSecondsRemaining = 0
+      roundGate = nil
+      pendingNextRound = nil
+      publishBattleTurnAnimation(damage: damage, completed: {})
       return
     }
-    battlePhase =
-      .showingResult
+    battlePhase = .showingResult
+    pendingNextRound = result.nextRound
     if isHost {
-      scheduleNextRoundAsHost(
-        round:
-          result.nextRound
-      )
+      roundGate = MultiplayerRoundGate(round: result.round)
+      DispatchQueue.main.asyncAfter(deadline: .now() + BattleRules.roundResultDisplaySeconds) { [weak self] in
+        self?.markRoundGate(.resultDisplayed, round: result.round, generation: generation)
+      }
+      DispatchQueue.main.asyncAfter(deadline: .now() + BattleRules.maxRoundAnimationWaitSeconds) { [weak self] in
+        guard let self, self.battleClockGeneration == generation,
+              self.roundGate?.didScheduleRecovery == false else { return }
+        self.recordPreparationDiagnostic("round animation watchdog round=\(result.round)")
+        self.markRoundGate(.watchdog, round: result.round, generation: generation)
+      }
+    }
+    publishBattleTurnAnimation(damage: damage) { [weak self] in
+      guard let self, self.battleClockGeneration == generation,
+            self.battlePhase == .showingResult, self.battleRound == result.round else { return }
+      if self.isHost {
+        self.markRoundGate(.hostFinished, round: result.round, generation: generation)
+      } else {
+        self.sendWire(MultiplayerWireMessage(
+          kind: MultiplayerWireKind.animationsFinished, playerState: nil, battleStart: nil,
+          move: nil, roundStart: nil, roundResult: nil, animationsFinishedRound: result.round
+        ))
+      }
     }
   }
+
+  private func markRoundGate(_ event: MultiplayerRoundGate.Event, round: Int, generation: Int) {
+    guard isHost, battleHasStarted, battleWinner == nil, battlePhase == .showingResult,
+          battleClockGeneration == generation, var gate = roundGate,
+          let nextRound = pendingNextRound else { return }
+    let shouldRecover = gate.mark(event, round: round)
+    roundGate = gate
+    if shouldRecover { scheduleNextRoundAsHost(round: nextRound) }
+  }
+
   /// Both players build their own result message using their own language.
   /// The wire-transmitted `result.message` remains for old client fallback.
   private func localizedRoundSummary(_ result: MultiplayerRoundResultMessage) -> String {
@@ -1593,81 +1730,37 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
     return note.isEmpty ? localMessage : note + "\n" + localMessage
   }
 
-  private func publishBattleTurnAnimation() {
-    guard
-      let hostMove,
-      let guestMove
-    else {
+  private func publishBattleTurnAnimation(damage: BattleDamage?, completed: @escaping () -> Void) {
+    guard let playerMove = localMove, let enemyMove = remoteMove else {
+      completed()
       return
     }
-    let playerMove =
-      isHost
-      ? hostMove
-      : guestMove
-    let enemyMove =
-      isHost
-      ? guestMove
-      : hostMove
-    let roundResult:
-      BattleRoundResult
-    if playerMove ==
-      enemyMove
-    {
-      roundResult =
-        .draw
-    } else if playerMove
-      .beats(
-        enemyMove
-      )
-    {
-      roundResult =
-        .playerWin
+    let roundResult: BattleRoundResult = playerMove == enemyMove ? .draw :
+      (playerMove.beats(enemyMove) ? .playerWin : .enemyWin)
+    let winner: BattleWinner? = winnerIsLocal.map { $0 ? .player : .enemy }
+    if let callback = onBattleTurnResolved {
+      callback(playerMove, enemyMove, roundResult, winner, damage, completed)
     } else {
-      roundResult =
-        .enemyWin
+      completed()
     }
-    let winner:
-      BattleWinner?
-    guard let battleWinner else {
-      winner =
-        nil
-      onBattleTurnResolved?(
-        playerMove,
-        enemyMove,
-        roundResult,
-        winner
-      )
-      return
-    }
-    let localWon =
-      (isHost
-        && battleWinner == .host)
-      || (!isHost
-        && battleWinner == .guest)
-    winner =
-      localWon
-      ? .player
-      : .enemy
-    onBattleTurnResolved?(
-      playerMove,
-      enemyMove,
-      roundResult,
-      winner
-    )
   }
   private func scheduleNextRoundAsHost(
     round: Int
   ) {
+    let generation = battleClockGeneration
     DispatchQueue.main.asyncAfter(
       deadline:
         .now()
-        + BattleRules
-        .roundResultDisplaySeconds
+        + BattleRules.roundRecoverySeconds
     ) { [weak self] in
       guard
         let self,
         self.isHost,
-        self.battleWinner == nil
+        self.battleHasStarted,
+        self.battleClockGeneration == generation,
+        self.battleWinner == nil,
+        self.battlePhase == .showingResult,
+        self.roundGate?.didScheduleRecovery == true
       else {
         return
       }
@@ -1713,6 +1806,10 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
   private func applyRoundStart(
     _ message: MultiplayerRoundStartMessage
   ) {
+    guard battlePhase == .showingResult, battleWinner == nil,
+          message.round == pendingNextRound else { return }
+    roundGate = nil
+    pendingNextRound = nil
     battleClockGeneration += 1
     let generation =
       battleClockGeneration
@@ -1728,13 +1825,7 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
       DeckSpawnL10n.text("Prepare sua próxima ação.")
     battlePhase =
       .showingResult
-    let delay =
-      max(
-        0,
-        message.startsAt
-          - Date()
-          .timeIntervalSince1970
-      )
+    let delay = max(0, min(0.40, message.startsAt - Date().timeIntervalSince1970))
     DispatchQueue.main.asyncAfter(
       deadline:
         .now()
@@ -1793,7 +1884,8 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
         completion(nil)
         return
       }
-      if error != nil {
+      if let error {
+        self.recordPreparationDiagnostic("TCP read error: \(error), accumulated=\(accumulated.count)/\(count)")
         completion(nil)
         return
       }
@@ -1813,6 +1905,7 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
         return
       }
       if isComplete {
+        self.recordPreparationDiagnostic("TCP EOF: received=\(next.count)/\(count)")
         completion(nil)
         return
       }
@@ -1828,68 +1921,39 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
       )
     }
   }
-  private func handleRemoteDisconnect(
-    _ connection: NWConnection
-  ) {
-    if hostConnection
-      === connection
-    {
-      hostConnection =
-        nil
-      DispatchQueue.main.async {
-        self.guestConnected =
-          false
-        self.remoteCardID =
-          nil
-        self.remoteReady =
-          false
-        self.remoteArenaReady =
-          false
-        self.resetBattleStateOnly()
-        self.statusMessage =
-          DeckSpawnL10n.text("Jogador desconectado. Aguardando outro jogador...")
-      }
-    }
-    if guestConnection
-      === connection
-    {
-      guestConnection =
-        nil
-      DispatchQueue.main.async {
-        self.remoteCardID =
-          nil
-        self.remoteReady =
-          false
-        self.remoteArenaReady =
-          false
-        self.resetBattleStateOnly()
-        self.connectionState =
-          .failed(
-            DeckSpawnL10n.text("O host encerrou a conexão.")
-          )
-        self.statusMessage =
-          DeckSpawnL10n.text("O host encerrou a conexão.")
-      }
+  private func handleRemoteDisconnect(_ connection: NWConnection) {
+    pendingIncomingConnections.removeValue(forKey: ObjectIdentifier(connection))
+    incomingHandshakes.remove(ObjectIdentifier(connection))
+    if hostConnection === connection {
+      hostConnection = nil
+      guestConnected = false
+      clearPlayerSyncState()
+      statusMessage = DeckSpawnL10n.text("Jogador desconectado. Aguardando outro jogador...")
+    } else if guestConnection === connection {
+      guestConnection = nil
+      clearPlayerSyncState()
+      let message = DeckSpawnL10n.text("O host encerrou a conexão.")
+      connectionState = .failed(message)
+      statusMessage = message
     }
   }
+
+  private func clearPlayerSyncState() {
+    localCardID = nil
+    remoteCardID = nil
+    localReady = false
+    remoteReady = false
+    localArenaReady = false
+    remoteArenaReady = false
+    resetBattleStateOnly()
+  }
+
   private func resetCardSyncState() {
-    DispatchQueue.main.async {
-      self.localCardID =
-        nil
-      self.remoteCardID =
-        nil
-      self.localReady =
-        false
-      self.remoteReady =
-        false
-      self.localArenaReady =
-        false
-      self.remoteArenaReady =
-        false
-      self.resetBattleStateOnly()
-    }
+    clearPlayerSyncState()
   }
   private func resetBattleStateOnly() {
+    roundGate = nil
+    pendingNextRound = nil
     battleClockGeneration += 1
     battleHasStarted = false
     battlePhase =
@@ -1914,17 +1978,9 @@ final class MultiplayerService: ObservableObject, @unchecked Sendable {
     lastBattleMessage =
       nil
   }
-  private func publishFailure(
-    _ message: String
-  ) {
-    DispatchQueue.main.async {
-      self.connectionState =
-        .failed(
-          message
-        )
-      self.statusMessage =
-        message
-    }
+  private func publishFailure(_ message: String) {
+    connectionState = .failed(message)
+    statusMessage = message
   }
   private static func generateJoinCode()
     -> String

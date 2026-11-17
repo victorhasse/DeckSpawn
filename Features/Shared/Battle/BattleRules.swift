@@ -2,6 +2,7 @@ import Foundation
 
 enum BattleRules {
 
+    static let versusDuration: TimeInterval = 2.5
     static let startCountdownSeconds = 3
     static let turnDurationSeconds = 25
     static let roundResultDisplaySeconds: TimeInterval = 2.0

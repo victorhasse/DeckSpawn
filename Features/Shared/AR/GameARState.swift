@@ -49,13 +49,6 @@ final class GameARState: ObservableObject {
     }
 
 
-    // Ativa efeitos experimentais somente nas batalhas singleplayer.
-    private(set) var singlePlayerEffectsEnabled = false
-
-    func enableSinglePlayerEffects() {
-        singlePlayerEffectsEnabled = true
-    }
-
     @Published private(set) var floatingDamageEvent: FloatingDamageEvent?
 
     func showFloatingDamage(id: UUID, amount: Int, at point: CGPoint?) {
@@ -256,7 +249,6 @@ final class GameARState: ObservableObject {
 
     func resetForNewSession() {
         setStageRibbonCue(.ambient)
-        singlePlayerEffectsEnabled = false
         clearFloatingDamage()
         activeARCoordinatorID = nil
         finalBattleAudioHandled = false

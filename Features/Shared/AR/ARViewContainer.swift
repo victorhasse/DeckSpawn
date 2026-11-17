@@ -340,6 +340,8 @@ extension ARViewContainer {
         private let battleEffects = BattleEffectManager()
         // Spider-Man Technique (web) and Impact (capoeira), independent of Goku VFX.
         private let spiderEffects = SpiderManEffectManager()
+        // Stormtrooper: unarmed punch / spinning-kick shadow accents.
+        private let trooperEffects = StormtrooperEffectManager()
         // Efeitos universais de Guarda, independentes dos VFX do Goku.
         private let guardEffects = GuardShieldEffectManager()
         // Faixa lateral do palco, com marca e confronto atual.
@@ -397,6 +399,7 @@ extension ARViewContainer {
             floatingDamageGeneration += 1
             battleEffects.cancelAll()
             spiderEffects.cancelAll()
+            trooperEffects.cancelAll()
             guardEffects.cancelAll()
             stageRibbon.reset()
             assetLoadGeneration += 1
@@ -1383,6 +1386,7 @@ extension ARViewContainer {
             floatingDamageGeneration += 1
             battleEffects.cancelAll()
             spiderEffects.cancelAll()
+            trooperEffects.cancelAll()
             guardEffects.cancelAll()
             state.clearFloatingDamage()
             _ = playCharacterAnimation(.idle, on: player)
@@ -2795,6 +2799,7 @@ extension ARViewContainer {
 
             battleEffects.cancelAll()
             spiderEffects.cancelAll()
+            trooperEffects.cancelAll()
             guardEffects.cancelAll()
             stageRibbon.reset()
             currentEnemyCardName = nil
@@ -4577,6 +4582,7 @@ extension ARViewContainer {
             // Elimina efeitos restantes da rodada anterior antes de criar novos.
             battleEffects.cancelAll()
             spiderEffects.cancelAll()
+            trooperEffects.cancelAll()
             guardEffects.cancelAll()
 
             let playerDuration =
@@ -4609,12 +4615,12 @@ extension ARViewContainer {
                 && damage?.target == .player
                 && (damage?.amount ?? 0) > 0
             let reactionDelay: TimeInterval
-            if state.singlePlayerEffectsEnabled && playerGokuImpactHits && playerDuration > 0 {
+            if playerGokuImpactHits && playerDuration > 0 {
                 reactionDelay = KamehamehaTiming.reactionDelayForSuccessfulHit(
                     gokuClipDuration: playerDuration,
                     opponentClipDuration: enemyDuration
                 )
-            } else if state.singlePlayerEffectsEnabled && enemyGokuImpactHits && enemyDuration > 0 {
+            } else if enemyGokuImpactHits && enemyDuration > 0 {
                 reactionDelay = KamehamehaTiming.reactionDelayForSuccessfulHit(
                     gokuClipDuration: enemyDuration,
                     opponentClipDuration: playerDuration
@@ -4624,8 +4630,7 @@ extension ARViewContainer {
             }
 
             let audioGeneration = battleAudioGeneration
-            if state.singlePlayerEffectsEnabled,
-               let arena = currentArenaEntity,
+            if let arena = currentArenaEntity,
                let scene = arView?.scene {
                 // Guarda é universal: todos os personagens recebem a mesma
                 // barreira frontal. O pulso forte só acontece quando Guarda
@@ -4837,6 +4842,77 @@ extension ARViewContainer {
                                 && self.currentEnemyEntity === enemy
                         }
                     )
+                }
+                // Stormtrooper: dark hand slashes for Technique and a
+                // graphite crescent around the foot during the spinning kick.
+                // These effects run for either fighter in both modes.
+                if selectedCard?.referenceImageName == "stormtrooper_cardgame",
+                   playerDuration > 0,
+                   let controller = animationPlaybackControllers[ObjectIdentifier(player)] {
+                    let validRound: () -> Bool = { [weak self, weak player, weak enemy, weak arena] in
+                        guard let self, let player, let enemy, let arena else { return false }
+                        return self.isCurrentSession
+                            && self.battleAudioGeneration == audioGeneration
+                            && self.currentArenaEntity === arena
+                            && self.currentCharacterEntity === player
+                            && self.currentEnemyEntity === enemy
+                    }
+                    switch playerMove {
+                    case .technique:
+                        trooperEffects.playTechnique(
+                            attacker: player, defender: enemy, arena: arena, scene: scene,
+                            controller: controller, clipDuration: playerDuration,
+                            reactionDelay: reactionDelay,
+                            hitsDefender: damage?.target == .enemy && (damage?.amount ?? 0) > 0,
+                            cameraRotation: arView?.cameraTransform.rotation,
+                            isValid: validRound
+                        )
+                    case .impact:
+                        trooperEffects.playImpact(
+                            attacker: player, defender: enemy, arena: arena, scene: scene,
+                            controller: controller, clipDuration: playerDuration,
+                            reactionDelay: reactionDelay,
+                            hitsDefender: damage?.target == .enemy && (damage?.amount ?? 0) > 0,
+                            cameraRotation: arView?.cameraTransform.rotation,
+                            isValid: validRound
+                        )
+                    case .defense:
+                        break
+                    }
+                }
+                if currentEnemyCardName == "stormtrooper_cardgame",
+                   enemyDuration > 0,
+                   let controller = animationPlaybackControllers[ObjectIdentifier(enemy)] {
+                    let validRound: () -> Bool = { [weak self, weak player, weak enemy, weak arena] in
+                        guard let self, let player, let enemy, let arena else { return false }
+                        return self.isCurrentSession
+                            && self.battleAudioGeneration == audioGeneration
+                            && self.currentArenaEntity === arena
+                            && self.currentCharacterEntity === player
+                            && self.currentEnemyEntity === enemy
+                    }
+                    switch enemyMove {
+                    case .technique:
+                        trooperEffects.playTechnique(
+                            attacker: enemy, defender: player, arena: arena, scene: scene,
+                            controller: controller, clipDuration: enemyDuration,
+                            reactionDelay: reactionDelay,
+                            hitsDefender: damage?.target == .player && (damage?.amount ?? 0) > 0,
+                            cameraRotation: arView?.cameraTransform.rotation,
+                            isValid: validRound
+                        )
+                    case .impact:
+                        trooperEffects.playImpact(
+                            attacker: enemy, defender: player, arena: arena, scene: scene,
+                            controller: controller, clipDuration: enemyDuration,
+                            reactionDelay: reactionDelay,
+                            hitsDefender: damage?.target == .player && (damage?.amount ?? 0) > 0,
+                            cameraRotation: arView?.cameraTransform.rotation,
+                            isValid: validRound
+                        )
+                    case .defense:
+                        break
+                    }
                 }
             }
 

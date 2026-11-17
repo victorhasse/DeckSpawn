@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct MultiplayerCardSelectionView: View {
 
@@ -16,9 +17,44 @@ struct MultiplayerCardSelectionView: View {
 
     let onBack: () -> Void
 
-    @State
+    @State private var requestedSelection: MultiplayerArenaSelection?
+    @State private var preparationError: String?
+    @State private var showingPreparationError = false
+    @State private var lastDiagnosticState: String?
+    @State private var readySince: ContinuousClock.Instant?
+    @State private var bothReadySince: ContinuousClock.Instant?
+    @State private var waitingNoticeLogged = false
+    @State private var copiedDiagnostics = false
+    @State private var showingExitConfirmation = false
+    @State private var showingSettings = false
 
-    private var didRequestEnemySummon = false
+    private struct PreparationInput: Equatable {
+        let phase: CardScanPhase
+        let activeCardID: String?
+        let selection: MultiplayerArenaSelection?
+        let announcedReady: Bool
+        let connected: Bool
+    }
+
+    private var preparationInput: PreparationInput {
+        let selection: MultiplayerArenaSelection?
+        if service.bothPlayersReady,
+           let local = service.localCardID,
+           let remote = service.remoteCardID {
+            selection = MultiplayerArenaSelection(localCardID: local, remoteCardID: remote)
+        } else {
+            selection = nil
+        }
+        return PreparationInput(
+            phase: arState.phase,
+            activeCardID: arState.activeCard?.id,
+            selection: selection,
+            announcedReady: service.localArenaReady,
+            connected: service.isHost
+                ? service.guestConnected && service.connectionState == .hosting
+                : service.connectionState == .connected
+        )
+    }
 
     var body: some View {
 
@@ -47,15 +83,15 @@ struct MultiplayerCardSelectionView: View {
 
                     != .waitingForArena {
 
-                    MultiplayerBattleHUD(
+                    MultiplayerBattleHUD(service: service, onExitBattle: requestBattleExit,
+                                         onSettings: { showingSettings = true })
 
-                        service: service,
-
-                        onExitBattle:
-
-                            leaveSelection
-
-                    )
+                    if service.battlePhase == .versus,
+                       let local = service.localCard, let remote = service.remoteCard {
+                        BattleVersusOverlay(player: local, opponent: remote, opponentTitle: "ADVERSÁRIO")
+                            .transition(.opacity)
+                            .zIndex(2)
+                    }
 
                 } else {
 
@@ -101,85 +137,90 @@ struct MultiplayerCardSelectionView: View {
 
                 }
 
+                FloatingDamageOverlay(event: arState.floatingDamageEvent)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
             }
 
         }
 
         .onAppear {
-
+            service.recordPreparationDiagnostic("AR selection screen appeared")
             connectBattleAnimations()
-
-            beginArenaSetupIfNeeded()
-
+            service.updateLocalCard(arState.activeCard?.id)
+            synchronizeArena()
+            syncStageRibbon()
         }
-
         .onDisappear {
-
+            requestedSelection = nil
             service.onBattleTurnResolved = nil
             service.onBattleResultConfirmed = nil
-
+            arState.setStageRibbonCue(.ambient)
         }
-
-        .onChange(
-
-            of: service.bothPlayersReady
-
-        ) {
-
-            _,
-
-            ready in
-
-            if ready {
-
-                beginArenaSetupIfNeeded()
-
+        .onChange(of: service.battlePhase) { _, _ in syncStageRibbon() }
+        .onChange(of: service.battleCountdown) { _, _ in syncStageRibbon() }
+        .onChange(of: arState.phase) { _, _ in syncStageRibbon() }
+        .onChange(of: preparationInput) { _, _ in
+            // Reevaluate on both AR and network changes, not just the Ready edge.
+            if requestedSelection == nil, !showingPreparationError,
+               arState.phase == .active || arState.activeCard == nil {
+                service.updateLocalCard(arState.activeCard?.id)
             }
-
+            synchronizeArena()
         }
-
-        .onChange(
-
-            of: arState.activeCard?.id
-
-        ) {
-
-            _,
-
-            newCardID in
-
-            service.updateLocalCard(
-
-                newCardID
-
-            )
-
+        .onChange(of: arState.battlePreparationFailureEvent) { _, event in
+            guard event != nil, requestedSelection != nil else { return }
+            failPreparation("Não foi possível preparar a arena. Volte à sala e tente novamente.")
         }
-
-        .onChange(
-
-            of: arState.phase
-
-        ) {
-
-            _,
-
-            newPhase in
-
-            if newPhase == .battleReady,
-
-               didRequestEnemySummon {
-
-                service.setLocalArenaReady(
-
-                    true
-
-                )
-
+        .task(id: service.battlePhase == .waitingForArena) { @MainActor in
+            // onChange is useful for fast response, but it is a view-render
+            // observer, not a reliable sole driver for a network handshake.
+            // Reconcile the actual state while waiting, without re-summoning.
+            guard service.battlePhase == .waitingForArena else {
+                readySince = nil
+                bothReadySince = nil
+                waitingNoticeLogged = false
+                return
             }
-
+            while !Task.isCancelled, service.battlePhase == .waitingForArena,
+                  !showingPreparationError {
+                reconcilePreparation()
+                do { try await Task.sleep(for: .milliseconds(250)) }
+                catch { return }
+            }
         }
-
+        #if DEBUG
+        .overlay(alignment: .topTrailing) {
+            if service.battlePhase != .waitingForArena {
+                diagnosticButton.padding(.top, 8).padding(.trailing, 64)
+            }
+        }
+        #endif
+        .alert(
+            DeckSpawnL10n.text("Partida interrompida"),
+            isPresented: $showingPreparationError
+        ) {
+            Button("OK") { leaveSelection() }
+            #if DEBUG
+            Button("Copiar diagnóstico e sair") {
+                copyDiagnostics()
+                leaveSelection()
+            }
+            #endif
+        } message: {
+            Text(preparationError ?? "")
+        }
+        .alert("Sair da batalha?", isPresented: $showingExitConfirmation) {
+            Button("Continuar jogando", role: .cancel) {}
+            Button("Sair da batalha", role: .destructive) { leaveSelection() }
+        } message: {
+            Text("A batalha será encerrada e você voltará à sala.")
+        }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView(state: arState)
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
     }
 
     private var shouldShowScanner: Bool {
@@ -362,19 +403,28 @@ struct MultiplayerCardSelectionView: View {
 
             Spacer()
 
-            Color.clear
-
-                .frame(
-
-                    width: 42,
-
-                    height: 42
-
-                )
-
+            #if DEBUG
+            diagnosticButton
+            #else
+            Color.clear.frame(width: 42, height: 42)
+            #endif
         }
-
     }
+
+    #if DEBUG
+    private var diagnosticButton: some View {
+        Button {
+            copyDiagnostics()
+        } label: {
+            Image(systemName: copiedDiagnostics ? "checkmark" : "doc.on.doc")
+                .fontWeight(.semibold)
+                .foregroundStyle(.white)
+                .frame(width: 42, height: 42)
+                .background(Color.black.opacity(0.66), in: Circle())
+        }
+        .accessibilityLabel("Copiar diagnóstico multiplayer")
+    }
+    #endif
 
     private var playerSyncStatus: some View {
 
@@ -738,11 +788,9 @@ struct MultiplayerCardSelectionView: View {
 
                     }
 
-                    service.setLocalReady(
-
-                        true
-
-                    )
+                    service.recordPreparationDiagnostic("Ready button tapped | \(diagnosticState)")
+                    service.updateLocalCard(arState.activeCard?.id)
+                    service.setLocalReady(true)
 
                 } label: {
 
@@ -796,9 +844,7 @@ struct MultiplayerCardSelectionView: View {
 
                 Button {
 
-                    didRequestEnemySummon =
-
-                        false
+                    requestedSelection = nil
 
                     service.resetLocalSelection()
 
@@ -914,87 +960,139 @@ struct MultiplayerCardSelectionView: View {
 
     }
 
-    private func connectBattleAnimations() {
+    private func syncStageRibbon() {
+        guard arState.phase == .battleReady else {
+            arState.setStageRibbonCue(.ambient)
+            return
+        }
+        switch service.battlePhase {
+        case .waitingForArena: arState.setStageRibbonCue(.ambient)
+        case .versus: arState.setStageRibbonCue(.versus)
+        case .countdown:
+            if let number = service.battleCountdown { arState.setStageRibbonCue(.countdown(number)) }
+        case .choosingMove: arState.setStageRibbonCue(.battle)
+        case .showingResult: arState.setStageRibbonCue(.action)
+        case .finished: arState.setStageRibbonCue(.result)
+        }
+    }
 
-        // Recebe a decisao definitiva ja localizada pelo MultiplayerService.
-        // Independente da animacao AR estar disponivel no instante do fim.
+    private func connectBattleAnimations() {
         service.onBattleResultConfirmed = { didWin in
             arState.announceLocalBattleResult(didWin: didWin)
         }
-
-        service.onBattleTurnResolved = {
-
-            playerMove,
-
-            enemyMove,
-
-            result,
-
-            winner in
-
+        service.onBattleTurnResolved = { playerMove, enemyMove, result, winner, damage, completed in
             arState.animateBattleTurn(
-
-                playerMove:
-
-                    playerMove,
-
-                enemyMove:
-
-                    enemyMove,
-
-                result:
-
-                    result,
-
-                winner:
-
-                    winner
-
+                playerMove: playerMove, enemyMove: enemyMove,
+                result: result, winner: winner, damage: damage,
+                animationsCompleted: completed
             )
-
         }
-
     }
 
-    private func beginArenaSetupIfNeeded() {
+    private var diagnosticState: String {
+        "AR phase=\(arState.phase) active=\(arState.activeCard?.id ?? "-") requested=\(String(describing: requestedSelection)) bothPlayers=\(service.bothPlayersReady) bothArenas=\(service.bothArenasReady) connected=\(preparationInput.connected) failure=\(String(describing: arState.battlePreparationFailureEvent?.failure))"
+    }
 
-        guard
+    private func copyDiagnostics() {
+        #if DEBUG
+        service.recordPreparationDiagnostic("SNAPSHOT \(diagnosticState)")
+        UIPasteboard.general.string = service.preparationDiagnostics.joined(separator: "\n")
+        copiedDiagnostics = true
+        #endif
+    }
 
-            service.bothPlayersReady,
-
-            !didRequestEnemySummon,
-
-            arState.phase == .active,
-
-            let remoteCard =
-
-                service.remoteCard
-
-        else {
-
-            return
-
+    private func reconcilePreparation() {
+        let snapshot = diagnosticState
+        if snapshot != lastDiagnosticState {
+            lastDiagnosticState = snapshot
+            service.recordPreparationDiagnostic(snapshot)
         }
+        let now = ContinuousClock.now
+        if service.localReady {
+            if readySince == nil { readySince = now }
+        } else {
+            readySince = nil
+            waitingNoticeLogged = false
+        }
+        if !service.bothPlayersReady {
+            bothReadySince = nil
+            // The other player may simply be choosing a card. Do not abort.
+            if let since = readySince, now - since >= .seconds(20), !waitingNoticeLogged {
+                waitingNoticeLogged = true
+                service.recordPreparationDiagnostic("WAIT >20s: remote Ready has not been confirmed")
+            }
+        } else if bothReadySince == nil {
+            bothReadySince = now
+        }
+        synchronizeArena()
+        guard !showingPreparationError else { return }
+        service.reconcileBattleStart()
+        // Arm the timeout as soon as both players are known ready, even if
+        // the AR request itself never happens.
+        if let since = bothReadySince, now - since >= .seconds(45),
+           service.battlePhase == .waitingForArena {
+            service.recordPreparationDiagnostic("TIMEOUT \(diagnosticState)")
+            failPreparation("Tempo esgotado ao preparar a arena. Volte à sala e tente novamente.")
+        }
+    }
 
-        didRequestEnemySummon =
+    private func synchronizeArena() {
+        guard !showingPreparationError,
+              service.battlePhase == .waitingForArena else { return }
+        let input = preparationInput
+        let matchingCard = input.activeCardID != nil
+            && input.activeCardID == service.localCardID
+        switch MultiplayerArenaGate.next(
+            selection: input.selection,
+            requested: requestedSelection,
+            localCharacterActive: input.phase == .active,
+            localCharacterMatches: matchingCard,
+            arReady: input.phase == .battleReady,
+            announcedReady: input.announcedReady,
+            connected: input.connected
+        ) {
+        case .wait:
+            break
+        case .prepare(let selection):
+            guard let remoteCard = service.remoteCard else {
+                failPreparation("Não foi possível preparar a arena. Volte à sala e tente novamente.")
+                return
+            }
+            requestedSelection = selection
+            service.recordPreparationDiagnostic("AR prepare requested opponent=\(selection.remoteCardID)")
+            arState.prepareBattle(against: remoteCard)
+            if arState.battlePreparationFailureEvent != nil {
+                failPreparation("Não foi possível preparar a arena. Volte à sala e tente novamente.")
+            }
+        case .announceReady:
+            service.recordPreparationDiagnostic("AR phase battleReady: announcing arena")
+            service.setLocalArenaReady(true)
+        case .abort:
+            failPreparation("O adversário saiu ou cancelou a seleção. Volte à sala e tente novamente.")
+        }
+    }
 
-            true
+    private func failPreparation(_ key: String) {
+        guard !showingPreparationError else { return }
+        service.recordPreparationDiagnostic("AR interrupted: \(key) | \(diagnosticState)")
+        preparationError = DeckSpawnL10n.text(key)
+        showingPreparationError = true
+        requestedSelection = nil
+        // Clear Ready locally and inform the other phone before leaving.
+        service.resetLocalSelection()
+    }
 
-        arState.prepareBattle(
-
-            against:
-
-                remoteCard
-
-        )
-
+    private func requestBattleExit() {
+        if service.battlePhase == .finished {
+            leaveSelection()
+        } else {
+            showingExitConfirmation = true
+        }
     }
 
     private func leaveSelection() {
 
-        didRequestEnemySummon =
-
-            false
+        requestedSelection = nil
 
         service.resetLocalSelection()
 
@@ -1086,401 +1184,92 @@ private struct BattlePreparationPanel: View {
 
 // MARK: - DeckSpawn Multiplayer Battle HUD V2
 
-private enum MultiplayerBattleTheme {
-    static let cyan = Color(red: 0.16, green: 0.91, blue: 1.0)
-    static let violet = Color(red: 0.64, green: 0.39, blue: 1.0)
-    static let ink = Color(red: 0.035, green: 0.055, blue: 0.14)
-    static let panel = Color(red: 0.045, green: 0.075, blue: 0.19)
-}
-
 private struct MultiplayerBattleHUD: View {
     @ObservedObject var service: MultiplayerService
     let onExitBattle: () -> Void
+    let onSettings: () -> Void
 
     var body: some View {
         ZStack {
-            VStack(spacing: 11) {
-                HStack(spacing: 9) {
-                    MultiplayerHPCard(
-                        title: "VOCÊ",
-                        card: service.localCard,
-                        currentHP: service.localHP,
-                        progress: service.localHPProgress,
-                        isTrailing: false
-                    )
-                    MultiplayerHPCard(
-                        title: "ADVERSÁRIO",
-                        card: service.remoteCard,
-                        currentHP: service.remoteHP,
-                        progress: service.remoteHPProgress,
-                        isTrailing: true
-                    )
-                }
-                .padding(.horizontal, 14)
-                .padding(.top, 68)
+            if let local = service.localCard, let remote = service.remoteCard {
+                VStack(spacing: 11) {
+                    HStack(spacing: 9) {
+                        FighterHPCard(title: "VOCÊ", card: local, currentHP: service.localHP,
+                                      maxHP: local.maxHP, progress: service.localHPProgress, isTrailing: false)
+                        FighterHPCard(title: "ADVERSÁRIO", card: remote, currentHP: service.remoteHP,
+                                      maxHP: remote.maxHP, progress: service.remoteHPProgress, isTrailing: true)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.top, 68)
 
-                battleStatus
+                    BattleRoundBanner(
+                        round: service.battleRound,
+                        message: service.battlePhase == .countdown ? nil : service.lastBattleMessage,
+                        isResolving: service.battlePhase == .showingResult,
+                        showsClock: service.battlePhase == .choosingMove,
+                        secondsRemaining: service.turnSecondsRemaining
+                    )
                     .padding(.horizontal, 20)
-
-                Spacer(minLength: 12)
-
-                battleControls
+                    Spacer(minLength: 12)
+                    battleControls(local: local, remote: remote)
+                }
             }
-
-            // Keep the exit control in the same location as the existing HUD.
             VStack {
                 HStack {
                     Button(action: onExitBattle) {
-                        Image(systemName: "chevron.left")
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                            .frame(width: 42, height: 42)
-                            .background(Color.black.opacity(0.66), in: Circle())
+                        HStack(spacing: 7) {
+                            Image(systemName: service.battlePhase == .finished ? "chevron.left" : "rectangle.portrait.and.arrow.right")
+                                .font(.system(size: 18, weight: .bold))
+                            if service.battlePhase != .finished {
+                                Text("SAIR").font(.system(size: 12, weight: .bold))
+                            }
+                        }
+                        .foregroundStyle(.white)
+                        .frame(height: 44)
+                        .padding(.horizontal, service.battlePhase == .finished ? 0 : 14)
+                        .frame(minWidth: 44)
+                        .background(Color.black.opacity(0.62), in: Capsule())
+                        .overlay {
+                            Capsule().strokeBorder(service.battlePhase == .finished ? Color.white.opacity(0.14) : Color.red.opacity(0.65), lineWidth: 1)
+                        }
                     }
-                    .accessibilityLabel("Voltar")
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(service.battlePhase == .finished ? Text("VOLTAR À SALA") : Text("Sair da batalha"))
                     Spacer()
+                    Button(action: onSettings) {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 19))
+                            .foregroundStyle(.white)
+                            .frame(width: 44, height: 44)
+                            .background(Color.black.opacity(0.62), in: Circle())
+                    }
+                    .accessibilityLabel("Configurações")
                 }
                 Spacer()
             }
             .padding(.top, 8)
             .padding(.horizontal, 14)
-
-            if service.battlePhase == .countdown,
-               let countdown = service.battleCountdown {
-                countdownPanel(countdown)
-                    .transition(.scale(scale: 0.88).combined(with: .opacity))
-                    .zIndex(1)
-            }
         }
-        .animation(
-            .easeInOut(duration: 0.22),
-            value: service.battlePhase == .countdown
-        )
-    }
-
-    private var battleStatus: some View {
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Image(systemName: "bolt.horizontal.fill")
-                        .foregroundStyle(MultiplayerBattleTheme.cyan)
-                    Text("RODADA \(service.battleRound)")
-                        .foregroundStyle(.white)
-                }
-                .font(.system(size: 11, weight: .black, design: .rounded))
-
-                if let message = service.lastBattleMessage {
-                    // MultiplayerService already provides a localized string.
-                    Text(message)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.86))
-                        .multilineTextAlignment(.leading)
-                        .lineLimit(3)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .id(message)
-                        .transition(.opacity)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            if service.battlePhase == .choosingMove {
-                turnClock
-            } else if service.battlePhase == .showingResult {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 25))
-                    .foregroundStyle(MultiplayerBattleTheme.violet)
-                    .frame(width: 45, height: 45)
-            } else if service.battlePhase == .countdown {
-                ProgressView()
-                    .tint(MultiplayerBattleTheme.cyan)
-                    .frame(width: 45, height: 45)
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
-        .background(
-            MultiplayerBattleTheme.panel.opacity(0.90),
-            in: RoundedRectangle(cornerRadius: 18)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(MultiplayerBattleTheme.cyan.opacity(0.29), lineWidth: 1)
-        }
-    }
-
-    private var turnClock: some View {
-        let duration = max(1, BattleRules.turnDurationSeconds)
-        let ratio = min(
-            max(Double(service.turnSecondsRemaining) / Double(duration), 0),
-            1
-        )
-        let color: Color = service.turnSecondsRemaining <= 5 ? .red :
-            (service.turnSecondsRemaining <= 10 ? .orange : MultiplayerBattleTheme.cyan)
-
-        return ZStack {
-            Circle()
-                .stroke(Color.white.opacity(0.11), lineWidth: 4)
-            Circle()
-                .trim(from: 0, to: ratio)
-                .stroke(
-                    color,
-                    style: StrokeStyle(lineWidth: 4, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
-                .animation(.linear(duration: 0.3), value: service.turnSecondsRemaining)
-            Text("\(service.turnSecondsRemaining)")
-                .font(.system(size: 16, weight: .black, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(color)
-        }
-        .frame(width: 45, height: 45)
-        .accessibilityLabel("\(service.turnSecondsRemaining)s")
-    }
-
-    private func countdownPanel(_ seconds: Int) -> some View {
-        VStack(spacing: 12) {
-            Text("PREPARE-SE")
-                .font(.system(size: 13, weight: .black))
-                .tracking(2)
-                .foregroundStyle(MultiplayerBattleTheme.cyan)
-
-            ZStack {
-                Circle()
-                    .stroke(MultiplayerBattleTheme.violet.opacity(0.30), lineWidth: 3)
-                Circle()
-                    .trim(from: 0, to: 0.75)
-                    .stroke(
-                        AngularGradient(
-                            colors: [
-                                MultiplayerBattleTheme.cyan,
-                                MultiplayerBattleTheme.violet,
-                                MultiplayerBattleTheme.cyan
-                            ],
-                            center: .center
-                        ),
-                        style: StrokeStyle(lineWidth: 5, lineCap: .round)
-                    )
-                    .rotationEffect(.degrees(-90))
-                Text("\(seconds)")
-                    .font(.system(size: 76, weight: .black, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(.white)
-                    .id(seconds)
-                    .transition(.opacity.combined(with: .scale))
-            }
-            .frame(width: 152, height: 152)
-            .shadow(color: MultiplayerBattleTheme.cyan.opacity(0.40), radius: 18)
-        }
-        .padding(29)
-        .background(
-            MultiplayerBattleTheme.ink.opacity(0.94),
-            in: RoundedRectangle(cornerRadius: 30)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 30)
-                .stroke(
-                    LinearGradient(
-                        colors: [MultiplayerBattleTheme.cyan, MultiplayerBattleTheme.violet],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1.5
-                )
-        }
-        .shadow(color: .black.opacity(0.45), radius: 25)
     }
 
     @ViewBuilder
-    private var battleControls: some View {
+    private func battleControls(local: CardDefinition, remote: CardDefinition) -> some View {
         switch service.battlePhase {
-        case .countdown, .waitingForArena:
-            EmptyView()
-
+        case .finished:
+            BattleResultPanel(winner: service.winnerIsLocal == true ? .player : .enemy,
+                              playerName: local.displayName, enemyName: remote.displayName,
+                              rounds: service.battleRound, remainingHP: service.localHP,
+                              onExit: onExitBattle, onRematch: nil,
+                              exitTitle: "VOLTAR À SALA", exitIcon: "arrow.uturn.backward.circle.fill")
         case .choosingMove:
             if let move = service.localMove {
-                SelectedMovePanel(
-                    move: move,
-                    secondsRemaining: service.turnSecondsRemaining
-                )
+                SelectedMovePanel(move: move, secondsRemaining: service.turnSecondsRemaining)
             } else {
-                MultiplayerActionPanel(
-                    enabled: service.canSubmitLocalMove,
-                    onMove: { move in
-                        service.submitLocalMove(move)
-                    }
-                )
+                BattleActionPanel(isDisabled: !service.canSubmitLocalMove, onMove: service.submitLocalMove)
             }
-
-        case .showingResult:
-            RoundResultPanel(
-                localMove: service.localMove,
-                remoteMove: service.remoteMove
-            )
-
-        case .finished:
-            MultiplayerBattleResultPanel(
-                victory: service.winnerIsLocal ?? false,
-                localName: service.localCard?.displayName ?? "Você",
-                remoteName: service.remoteCard?.displayName ?? "Adversário",
-                onExit: onExitBattle
-            )
+        case .versus, .countdown, .waitingForArena, .showingResult:
+            BattleActionPanel(isDisabled: true, onMove: service.submitLocalMove)
         }
-    }
-}
-
-private struct MultiplayerHPCard: View {
-    let title: String
-    let card: CardDefinition?
-    let currentHP: Int
-    let progress: Double
-    let isTrailing: Bool
-
-    private var accent: Color {
-        isTrailing ? MultiplayerBattleTheme.violet : MultiplayerBattleTheme.cyan
-    }
-
-    private var healthColor: Color {
-        progress <= 0.25 ? .red : (progress <= 0.50 ? .orange : accent)
-    }
-
-    var body: some View {
-        VStack(alignment: isTrailing ? .trailing : .leading, spacing: 7) {
-            HStack(spacing: 5) {
-                if !isTrailing {
-                    Circle().fill(accent).frame(width: 6, height: 6)
-                }
-                Text(LocalizedStringKey(title))
-                    .font(.system(size: 10, weight: .black))
-                    .tracking(1.3)
-                if isTrailing {
-                    Circle().fill(accent).frame(width: 6, height: 6)
-                }
-            }
-            .foregroundStyle(accent)
-
-            Text(LocalizedStringKey(card?.displayName ?? "—"))
-                .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-
-            GeometryReader { geo in
-                ZStack(alignment: isTrailing ? .trailing : .leading) {
-                    Capsule().fill(Color.white.opacity(0.12))
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [healthColor.opacity(0.65), healthColor],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: geo.size.width * min(max(progress, 0), 1))
-                        .animation(.easeOut(duration: 0.45), value: progress)
-                }
-            }
-            .frame(height: 7)
-
-            Text("\(currentHP) / \(card?.maxHP ?? 0) HP")
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundStyle(.white.opacity(0.80))
-        }
-        .frame(maxWidth: .infinity, alignment: isTrailing ? .trailing : .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 12)
-        .background(
-            MultiplayerBattleTheme.panel.opacity(0.91),
-            in: RoundedRectangle(cornerRadius: 17)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 17)
-                .stroke(accent.opacity(0.46), lineWidth: 1)
-        }
-        .shadow(color: accent.opacity(0.10), radius: 9)
-    }
-}
-
-private struct MultiplayerActionPanel: View {
-    let enabled: Bool
-    let onMove: (BattleMove) -> Void
-
-    private func color(for move: BattleMove) -> Color {
-        switch move {
-        case .impact:
-            return MultiplayerBattleTheme.cyan
-        case .technique:
-            return MultiplayerBattleTheme.violet
-        case .defense:
-            return Color(red: 0.28, green: 0.85, blue: 0.75)
-        }
-    }
-
-    var body: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 7) {
-                Image(systemName: "gamecontroller.fill")
-                    .foregroundStyle(MultiplayerBattleTheme.cyan)
-                Text("ESCOLHA SUA AÇÃO")
-                    .foregroundStyle(.white)
-                Spacer()
-            }
-            .font(.system(size: 12, weight: .black))
-            .tracking(1)
-
-            HStack(spacing: 9) {
-                ForEach(BattleMove.allCases) { move in
-                    let accent = color(for: move)
-                    Button {
-                        onMove(move)
-                    } label: {
-                        VStack(spacing: 8) {
-                            Image(systemName: move.systemImage)
-                                .font(.system(size: 25, weight: .semibold))
-                                .frame(height: 30)
-                                .shadow(color: accent.opacity(0.6), radius: 8)
-                            Text(LocalizedStringKey(move.displayName))
-                                .font(.system(size: 11, weight: .black))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                        }
-                        .foregroundStyle(enabled ? accent : Color.white.opacity(0.45))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 88)
-                        .background(
-                            accent.opacity(enabled ? 0.12 : 0.04),
-                            in: RoundedRectangle(cornerRadius: 16)
-                        )
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(
-                                    accent.opacity(enabled ? 0.64 : 0.16),
-                                    lineWidth: 1.3
-                                )
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(!enabled)
-                }
-            }
-
-            Text("Impacto vence Técnica • Técnica vence Guarda • Guarda vence Impacto")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(0.56))
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(15)
-        .background(
-            MultiplayerBattleTheme.ink.opacity(0.92),
-            in: RoundedRectangle(cornerRadius: 23)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 23)
-                .stroke(MultiplayerBattleTheme.violet.opacity(0.45), lineWidth: 1)
-        }
-        .padding(.horizontal, 14)
-        .padding(.bottom, 24)
     }
 }
 
@@ -1488,7 +1277,7 @@ private struct SelectedMovePanel: View {
     let move: BattleMove
     let secondsRemaining: Int
 
-    private var accent: Color { MultiplayerBattleTheme.cyan }
+    private var accent: Color { BattleTheme.cyan }
 
     var body: some View {
         VStack(spacing: 9) {
@@ -1504,7 +1293,7 @@ private struct SelectedMovePanel: View {
 
             HStack(spacing: 8) {
                 Image(systemName: move.systemImage)
-                    .foregroundStyle(MultiplayerBattleTheme.violet)
+                    .foregroundStyle(BattleTheme.violet)
                 Text(LocalizedStringKey(move.displayName))
                     .foregroundStyle(.white)
             }
@@ -1518,7 +1307,7 @@ private struct SelectedMovePanel: View {
         .frame(maxWidth: .infinity)
         .padding(19)
         .background(
-            MultiplayerBattleTheme.ink.opacity(0.94),
+            BattleTheme.ink.opacity(0.94),
             in: RoundedRectangle(cornerRadius: 23)
         )
         .overlay {
@@ -1527,136 +1316,6 @@ private struct SelectedMovePanel: View {
         }
         .padding(.horizontal, 14)
         .padding(.bottom, 24)
-    }
-}
-
-private struct RoundResultPanel: View {
-    let localMove: BattleMove?
-    let remoteMove: BattleMove?
-
-    var body: some View {
-        HStack(spacing: 12) {
-            moveCard(title: "VOCÊ", move: localMove, accent: MultiplayerBattleTheme.cyan)
-
-            Text("VS")
-                .font(.system(size: 13, weight: .black, design: .rounded))
-                .foregroundStyle(.white.opacity(0.50))
-
-            moveCard(title: "ADVERSÁRIO", move: remoteMove, accent: MultiplayerBattleTheme.violet)
-        }
-        .padding(15)
-        .background(
-            MultiplayerBattleTheme.ink.opacity(0.94),
-            in: RoundedRectangle(cornerRadius: 23)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 23)
-                .stroke(MultiplayerBattleTheme.violet.opacity(0.52), lineWidth: 1)
-        }
-        .padding(.horizontal, 14)
-        .padding(.bottom, 24)
-    }
-
-    private func moveCard(
-        title: String,
-        move: BattleMove?,
-        accent: Color
-    ) -> some View {
-        VStack(spacing: 7) {
-            Text(LocalizedStringKey(title))
-                .font(.system(size: 10, weight: .black))
-                .tracking(0.8)
-                .foregroundStyle(accent)
-
-            Image(systemName: move?.systemImage ?? "questionmark")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(accent)
-                .shadow(color: accent.opacity(0.45), radius: 8)
-
-            Text(LocalizedStringKey(move?.displayName ?? "—"))
-                .font(.system(size: 11, weight: .black))
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
-        .background(
-            accent.opacity(0.08),
-            in: RoundedRectangle(cornerRadius: 14)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(accent.opacity(0.38), lineWidth: 1)
-        }
-    }
-}
-
-private struct MultiplayerBattleResultPanel: View {
-    let victory: Bool
-    let localName: String
-    let remoteName: String
-    let onExit: () -> Void
-
-    private var accent: Color {
-        victory ? MultiplayerBattleTheme.cyan : MultiplayerBattleTheme.violet
-    }
-
-    var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: victory ? "trophy.fill" : "shield.slash.fill")
-                .font(.system(size: 39, weight: .semibold))
-                .foregroundStyle(accent)
-                .shadow(color: accent.opacity(0.70), radius: 16)
-                .padding(.top, 5)
-
-            Text(LocalizedStringKey(victory ? "VITÓRIA" : "DERROTA"))
-                .font(.system(size: 27, weight: .black, design: .rounded))
-                .tracking(2)
-                .foregroundStyle(.white)
-
-            Text(DeckSpawnL10n.format(
-                "%@ venceu %@.",
-                victory ? localName : remoteName,
-                victory ? remoteName : localName
-            ))
-            .font(.subheadline)
-            .foregroundStyle(.white.opacity(0.78))
-            .multilineTextAlignment(.center)
-
-            Button(action: onExit) {
-                HStack(spacing: 8) {
-                    Image(systemName: "arrow.uturn.backward.circle.fill")
-                    Text("VOLTAR À SALA")
-                }
-                .font(.system(size: 13, weight: .black))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 15)
-                .foregroundStyle(MultiplayerBattleTheme.ink)
-                .background(
-                    LinearGradient(
-                        colors: [MultiplayerBattleTheme.cyan, MultiplayerBattleTheme.violet],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    ),
-                    in: RoundedRectangle(cornerRadius: 15)
-                )
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 4)
-        }
-        .padding(21)
-        .background(
-            MultiplayerBattleTheme.ink.opacity(0.95),
-            in: RoundedRectangle(cornerRadius: 24)
-        )
-        .overlay {
-            RoundedRectangle(cornerRadius: 24)
-                .stroke(accent.opacity(0.65), lineWidth: 1.3)
-        }
-        .shadow(color: accent.opacity(0.17), radius: 22)
-        .padding(.horizontal, 24)
-        .padding(.bottom, 28)
     }
 }
 

@@ -47,6 +47,7 @@ enum MultiplayerConnectionState: Equatable {
 
 enum MultiplayerBattlePhase: Equatable {
     case waitingForArena
+    case versus
     case countdown
     case choosingMove
     case showingResult
@@ -142,12 +143,15 @@ nonisolated struct MultiplayerWireMessage: Codable, Sendable {
     let move: MultiplayerMoveMessage?
     let roundStart: MultiplayerRoundStartMessage?
     let roundResult: MultiplayerRoundResultMessage?
+    var animationsFinishedRound: Int? = nil
 }
 
 nonisolated enum MultiplayerWireKind {
+    static let heartbeat = "heartbeat"
     static let playerState = "playerState"
     static let battleStart = "battleStart"
     static let submitMove = "submitMove"
     static let roundStart = "roundStart"
     static let roundResult = "roundResult"
+    static let animationsFinished = "animationsFinished"
 }
