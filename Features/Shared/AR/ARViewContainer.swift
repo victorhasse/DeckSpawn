@@ -342,6 +342,7 @@ extension ARViewContainer {
         private let spiderEffects = SpiderManEffectManager()
         // Stormtrooper: unarmed punch / spinning-kick shadow accents.
         private let trooperEffects = StormtrooperEffectManager()
+        private let mrsEffects = MrsIncredibleEffectManager()
         // Efeitos universais de Guarda, independentes dos VFX do Goku.
         private let guardEffects = GuardShieldEffectManager()
         // Faixa lateral do palco, com marca e confronto atual.
@@ -400,6 +401,7 @@ extension ARViewContainer {
             battleEffects.cancelAll()
             spiderEffects.cancelAll()
             trooperEffects.cancelAll()
+            mrsEffects.cancelAll()
             guardEffects.cancelAll()
             stageRibbon.reset()
             assetLoadGeneration += 1
@@ -1387,6 +1389,7 @@ extension ARViewContainer {
             battleEffects.cancelAll()
             spiderEffects.cancelAll()
             trooperEffects.cancelAll()
+            mrsEffects.cancelAll()
             guardEffects.cancelAll()
             state.clearFloatingDamage()
             _ = playCharacterAnimation(.idle, on: player)
@@ -2800,6 +2803,7 @@ extension ARViewContainer {
             battleEffects.cancelAll()
             spiderEffects.cancelAll()
             trooperEffects.cancelAll()
+            mrsEffects.cancelAll()
             guardEffects.cancelAll()
             stageRibbon.reset()
             currentEnemyCardName = nil
@@ -4583,6 +4587,7 @@ extension ARViewContainer {
             battleEffects.cancelAll()
             spiderEffects.cancelAll()
             trooperEffects.cancelAll()
+            mrsEffects.cancelAll()
             guardEffects.cancelAll()
 
             let playerDuration =
@@ -4903,6 +4908,75 @@ extension ARViewContainer {
                         )
                     case .impact:
                         trooperEffects.playImpact(
+                            attacker: enemy, defender: player, arena: arena, scene: scene,
+                            controller: controller, clipDuration: enemyDuration,
+                            reactionDelay: reactionDelay,
+                            hitsDefender: damage?.target == .player && (damage?.amount ?? 0) > 0,
+                            cameraRotation: arView?.cameraTransform.rotation,
+                            isValid: validRound
+                        )
+                    case .defense:
+                        break
+                    }
+                }
+                // Mrs. Incredible: warm, motion-tracked punch and kick trails.
+                if selectedCard?.referenceImageName == "mrsincredible_cardgame",
+                   playerDuration > 0,
+                   let controller = animationPlaybackControllers[ObjectIdentifier(player)] {
+                    let validRound: () -> Bool = { [weak self, weak player, weak enemy, weak arena] in
+                        guard let self, let player, let enemy, let arena else { return false }
+                        return self.isCurrentSession
+                            && self.battleAudioGeneration == audioGeneration
+                            && self.currentArenaEntity === arena
+                            && self.currentCharacterEntity === player
+                            && self.currentEnemyEntity === enemy
+                    }
+                    switch playerMove {
+                    case .technique:
+                        mrsEffects.playTechnique(
+                            attacker: player, defender: enemy, arena: arena, scene: scene,
+                            controller: controller, clipDuration: playerDuration,
+                            reactionDelay: reactionDelay,
+                            hitsDefender: damage?.target == .enemy && (damage?.amount ?? 0) > 0,
+                            cameraRotation: arView?.cameraTransform.rotation,
+                            isValid: validRound
+                        )
+                    case .impact:
+                        mrsEffects.playImpact(
+                            attacker: player, defender: enemy, arena: arena, scene: scene,
+                            controller: controller, clipDuration: playerDuration,
+                            reactionDelay: reactionDelay,
+                            hitsDefender: damage?.target == .enemy && (damage?.amount ?? 0) > 0,
+                            cameraRotation: arView?.cameraTransform.rotation,
+                            isValid: validRound
+                        )
+                    case .defense:
+                        break
+                    }
+                }
+                if currentEnemyCardName == "mrsincredible_cardgame",
+                   enemyDuration > 0,
+                   let controller = animationPlaybackControllers[ObjectIdentifier(enemy)] {
+                    let validRound: () -> Bool = { [weak self, weak player, weak enemy, weak arena] in
+                        guard let self, let player, let enemy, let arena else { return false }
+                        return self.isCurrentSession
+                            && self.battleAudioGeneration == audioGeneration
+                            && self.currentArenaEntity === arena
+                            && self.currentCharacterEntity === player
+                            && self.currentEnemyEntity === enemy
+                    }
+                    switch enemyMove {
+                    case .technique:
+                        mrsEffects.playTechnique(
+                            attacker: enemy, defender: player, arena: arena, scene: scene,
+                            controller: controller, clipDuration: enemyDuration,
+                            reactionDelay: reactionDelay,
+                            hitsDefender: damage?.target == .player && (damage?.amount ?? 0) > 0,
+                            cameraRotation: arView?.cameraTransform.rotation,
+                            isValid: validRound
+                        )
+                    case .impact:
+                        mrsEffects.playImpact(
                             attacker: enemy, defender: player, arena: arena, scene: scene,
                             controller: controller, clipDuration: enemyDuration,
                             reactionDelay: reactionDelay,
