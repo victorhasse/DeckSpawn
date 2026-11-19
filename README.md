@@ -1,3 +1,6 @@
+<img width="1448" height="1086" alt="DeckSpawn_logo" src="https://github.com/user-attachments/assets/ba67d7e5-bd88-4e0a-a2be-1daa41688502" />
+
+
 # DeckSpawn
 
 **Bring physical cards to life through augmented reality.**
@@ -40,7 +43,7 @@ The project explores the integration of native iOS development, AR tracking, 3D 
 
 ## Gameplay showcase
 
-*Real gameplay screenshots and video will be added here.*
+*Real gameplay screenshots and video*
 
 ### Screenshots
 
@@ -101,14 +104,14 @@ Do not publish footage or character artwork unless you have the necessary rights
 
 The development build currently includes four playable characters, each associated with a physical card and its own 3D animation set.
 
-| Character | Implementation highlights |
+| Character | Picture |
 |---|---|
-| Spider-Man | Animated 3D fighter linked to a custom card. |
-| Stormtrooper | Animated combat with motion trails following attack movements. |
-| Goku | Animated 3D fighter integrated into the AR summoning and battle flow. |
-| Mrs. Incredible (Elastigirl) | Punch and kick attacks with warm-colored, character-specific visual effects. |
+| Spider-Man | <img width="575" height="460" alt="spiderman_cardgame" src="https://github.com/user-attachments/assets/776227f3-d448-49f3-a283-a80008de0ad3" /> |
+| Stormtrooper | <img width="575" height="460" alt="stormtrooper_cardgame" src="https://github.com/user-attachments/assets/6403981f-6d13-409c-809a-ae3a0206d666" /> |
+| Goku | <img width="575" height="460" alt="goku_cardgame" src="https://github.com/user-attachments/assets/5847e81b-6fac-4701-bc96-01e1ab8e9654" /> |
+| Mrs. Incredible (Elastigirl) | <img width="575" height="460" alt="mrsincredible_cardgame" src="https://github.com/user-attachments/assets/73b227ce-9143-478a-9512-d72edfd671b0" /> |
 
-The effects are designed to emphasize the movement of an attack rather than simply display generic effects around a fighter. In particular, the Stormtrooper's attack trails and Mrs. Incredible's punch and kick effects are recent additions to the combat presentation.
+Effects were developed to highlight the movement of each attack, rather than just displaying generic effects around the characters. The Stormtrooper's attack trails, Mrs. Incredible's punch and kick effects, Goku's signature Kamehameha, and Spider-Man's web effects are among the recent additions to the combat presentation.
 
 Character preparation involves importing and rigging 3D models, preparing animations, and exporting animation assets in USDZ format for RealityKit. The game associates each supported card with the corresponding character and animation identifiers.
 
@@ -256,7 +259,7 @@ DeckSpawn is a functional prototype developed for personal, academic, and portfo
 - [x] Functional local multiplayer between two physical iPhones.
 - [x] Four playable characters with dedicated animation sets.
 - [x] Character-specific combat VFX, including Stormtrooper and Mrs. Incredible attack effects.
-- [x] Scanning and summoning audio, haptics, and player-specific victory/defeat sounds.
+- [x] Scanning and summoning audio, haptics, and victory/defeat sounds.
 - [x] English and Brazilian Portuguese localization.
 - [x] Public source-code repository separated from non-distributed assets.
 
@@ -299,8 +302,4 @@ Third-party materials remain subject to their owners' rights and applicable lice
 
 DeckSpawn is both a personal experiment and an academic project focused on practical iOS engineering. It brings together **augmented reality, physical input, 3D animation, combat effects, game-state management, UI design, localization, and local multiplayer networking** in a single playable prototype.
 
-<!-- PORTFOLIO LINK — replace this line once your website page is available.
-**Portfolio:** [View the DeckSpawn case study](YOUR_PORTFOLIO_URL)
--->
-
-*Portfolio case study link coming soon.*
+**Portfolio:** [See more projects on my website!](www.victorhasse.com)
