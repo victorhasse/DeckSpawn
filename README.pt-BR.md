@@ -1,3 +1,5 @@
+<img width="1448" height="1086" alt="DeckSpawn_logo" src="https://github.com/user-attachments/assets/ba67d7e5-bd88-4e0a-a2be-1daa41688502" />
+
 # DeckSpawn
 
 **Dê vida às cartas físicas com realidade aumentada.**
@@ -40,7 +42,7 @@ O projeto explora a integração entre desenvolvimento nativo para iOS, rastream
 
 ## Demonstração do jogo
 
-*Capturas reais e vídeo de gameplay serão adicionados aqui.*
+*Capturas reais e vídeo de gameplay*
 
 ### Screenshots
 
@@ -101,14 +103,14 @@ Não publique vídeos ou artes de personagens sem as autorizações necessárias
 
 A versão de desenvolvimento conta atualmente com quatro personagens jogáveis, cada um associado a uma carta física e a seu próprio conjunto de animações 3D.
 
-| Personagem | Destaques da implementação |
+| Personagem | Imagem |
 |---|---|
-| Homem-Aranha (Spider-Man) | Personagem 3D animado associado a uma carta própria. |
-| Stormtrooper | Combate animado com efeitos em forma de rastros que acompanham os movimentos de ataque. |
-| Goku | Personagem 3D animado integrado ao fluxo de invocação em RA e batalha. |
-| Sra. Incrível (Mulher-Elástica / Mrs. Incredible) | Ataques de soco e chute com efeitos visuais personalizados em tons quentes. |
+| Homem-Aranha (Spider-Man) | <img width="575" height="460" alt="spiderman_cardgame" src="https://github.com/user-attachments/assets/776227f3-d448-49f3-a283-a80008de0ad3" /> |
+| Stormtrooper | <img width="575" height="460" alt="stormtrooper_cardgame" src="https://github.com/user-attachments/assets/6403981f-6d13-409c-809a-ae3a0206d666" /> |
+| Goku | <img width="575" height="460" alt="goku_cardgame" src="https://github.com/user-attachments/assets/5847e81b-6fac-4701-bc96-01e1ab8e9654" /> |
+| Sra. Incrível (Mulher-Elástica / Mrs. Incredible) | <img width="575" height="460" alt="mrsincredible_cardgame" src="https://github.com/user-attachments/assets/73b227ce-9143-478a-9512-d72edfd671b0" /> |
 
-Os efeitos são desenvolvidos para destacar o movimento de cada ataque, em vez de apenas exibir efeitos genéricos ao redor dos personagens. Os rastros de ataque do Stormtrooper e os efeitos de soco e chute da Sra. Incrível estão entre as adições recentes à apresentação do combate.
+Foram desenvolvidos efeitos para destacar o movimento de cada ataque, em vez de apenas exibir efeitos genéricos ao redor dos personagens. Os rastros de ataque do Stormtrooper, os efeitos de soco e chute da Sra. Incrível, o kamehameha bem característico do Goku e efeitos de teia do Homem-Aranha, estão entre as adições recentes à apresentação do combate.
 
 A preparação dos personagens envolve importação e rigging dos modelos 3D, preparação das animações e exportação dos arquivos no formato USDZ para uso no RealityKit. O jogo associa cada carta compatível aos identificadores do personagem e de suas animações.
 
@@ -256,7 +258,7 @@ O DeckSpawn é um protótipo funcional com finalidade pessoal, acadêmica e de p
 - [x] Multiplayer local funcional entre dois iPhones físicos.
 - [x] Quatro personagens jogáveis com conjuntos próprios de animações.
 - [x] Efeitos de combate personalizados, incluindo os ataques do Stormtrooper e da Sra. Incrível.
-- [x] Sons de escaneamento e invocação, feedback tátil e áudio de vitória/derrota específico para cada jogador.
+- [x] Sons de escaneamento e invocação, feedback tátil e áudio de vitória/derrota.
 - [x] Localização para português brasileiro e inglês.
 - [x] Repositório público de código-fonte separado dos assets não distribuídos.
 
@@ -298,8 +300,4 @@ Os materiais de terceiros permanecem sujeitos aos direitos de seus respectivos t
 
 O DeckSpawn é um projeto pessoal e acadêmico voltado à prática da engenharia de software para iOS. Ele reúne **realidade aumentada, interação com cartas físicas, animações 3D, efeitos de combate, gerenciamento de estados de jogo, design de interfaces, localização e networking multiplayer local** em um único protótipo jogável.
 
-<!-- LINK DO PORTFÓLIO — substitua esta linha quando a página do seu site estiver disponível.
-**Portfólio:** [Conheça o projeto DeckSpawn](URL_DO_SEU_PORTFOLIO)
--->
-
-*Link para o projeto no portfólio em breve.*
+**Portfólio:** [Veja mais projetos no meu website!](www.victorhasse.com)
