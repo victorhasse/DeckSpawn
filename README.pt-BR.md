@@ -2,11 +2,13 @@
 
 **Dê vida às cartas físicas com realidade aumentada.**
 
-Um **jogo de batalha com cartas para iOS**, desenvolvido como projeto pessoal e acadêmico com **Swift, SwiftUI, ARKit e RealityKit**. O DeckSpawn reconhece cartas físicas, invoca personagens 3D animados em uma cena de realidade aumentada e oferece batalhas singleplayer e multiplayer local entre dois iPhones.
+Um **jogo nativo de batalha com cartas para iOS**, desenvolvido como projeto pessoal e acadêmico. Criado com **Swift, SwiftUI, ARKit, RealityKit e MultipeerConnectivity**, o DeckSpawn transforma cartas físicas em lutadores 3D animados, combinando batalhas em realidade aumentada, efeitos visuais personalizados, singleplayer e multiplayer local entre dois iPhones.
+
+**Escaneie uma carta. Invoque um personagem. Batalhe em RA.**
 
 [**English**](README.md) · [**Português (Brasil)**](README.pt-BR.md)
 
-> **Estado do projeto:** Em desenvolvimento ativo  
+> **Estado do projeto:** Protótipo funcional — singleplayer e multiplayer local implementados; em desenvolvimento ativo  
 > **Tipo de repositório:** Apresentação pública do código-fonte para estudos e portfólio  
 > **Importante:** Este repositório **não inclui** os modelos 3D dos personagens, arquivos de animação, imagens de referência das cartas nem arquivos de áudio. Leia [Recursos ausentes e limitações](#recursos-ausentes-e-limitações) e [Licenciamento](#licenciamento).
 
@@ -17,6 +19,7 @@ Um **jogo de batalha com cartas para iOS**, desenvolvido como projeto pessoal e 
 - [Sobre o jogo](#sobre-o-jogo)
 - [Demonstração do jogo](#demonstração-do-jogo)
 - [Funcionalidades](#funcionalidades)
+- [Personagens jogáveis e efeitos de combate](#personagens-jogáveis-e-efeitos-de-combate)
 - [Como funciona uma partida](#como-funciona-uma-partida)
 - [Tecnologias utilizadas](#tecnologias-utilizadas)
 - [Arquitetura do projeto](#arquitetura-do-projeto)
@@ -29,9 +32,11 @@ Um **jogo de batalha com cartas para iOS**, desenvolvido como projeto pessoal e 
 
 ## Sobre o jogo
 
-O **DeckSpawn** combina cartas físicas com personagens 3D interativos. Ao apontar a câmera do iPhone para uma carta compatível, o aplicativo utiliza reconhecimento de imagem e permite invocar o personagem correspondente em uma cena de realidade aumentada.
+O **DeckSpawn** combina cartas físicas com personagens 3D interativos. Ao apontar a câmera do iPhone para uma carta impressa compatível, o aplicativo utiliza reconhecimento de imagem e permite invocar o personagem correspondente em uma cena de realidade aumentada.
 
-A experiência vai além do escaneamento: o jogador pode escolher um personagem e participar de batalhas contra um adversário controlado pelo jogo ou contra outro jogador em um iPhone próximo. O projeto explora a integração entre realidade aumentada, estados de jogo, animações e comunicação entre dispositivos em um único aplicativo iOS nativo.
+A carta é o ponto de partida de uma batalha jogável, e não apenas um gatilho para exibição de um modelo 3D. Os jogadores escolhem seus personagens, enfrentam um adversário controlado pelo jogo ou outro jogador próximo e recebem feedback visual, sonoro e tátil durante a experiência.
+
+O projeto explora a integração entre desenvolvimento nativo para iOS, rastreamento em RA, animações 3D, gerenciamento de estados de batalha e comunicação entre dispositivos. Ambos os modos de jogo estão implementados, e o fluxo de multiplayer local já foi testado em iPhones físicos.
 
 ## Demonstração do jogo
 
@@ -43,15 +48,21 @@ A experiência vai além do escaneamento: o jogador pode escolher um personagem 
 |:---:|:---:|:---:|
 | *Em breve* | *Em breve* | *Em breve* |
 
-<!-- GUIA PARA SCREENSHOTS — substitua a linha acima quando estiver pronto.
+| Seleção de personagens | Multiplayer local | Resultado da batalha |
+|:---:|:---:|:---:|
+| *Em breve* | *Em breve* | *Em breve* |
+
+<!-- GUIA PARA SCREENSHOTS — substitua as linhas de preenchimento das tabelas quando estiver pronto.
 Crie docs/media/ e utilize imagens próprias que você tenha autorização para divulgar.
 
 | Menu principal | Escaneamento da carta | Batalha em RA |
 |:---:|:---:|:---:|
 | ![Menu principal do DeckSpawn](docs/media/main-menu.png) | ![Escaneamento de carta física](docs/media/card-scanning.png) | ![Batalha em realidade aumentada](docs/media/ar-battle.png) |
 
-Opcional: adicione uma segunda tabela com conexão multiplayer,
-seleção de personagens e tela de vitória/derrota.
+| Seleção de personagens | Multiplayer local | Resultado da batalha |
+|:---:|:---:|:---:|
+| ![Seleção de personagens](docs/media/character-selection.png) | ![Conexão multiplayer local](docs/media/local-multiplayer.png) | ![Resultado da batalha](docs/media/battle-result.png) |
+
 Use os mesmos nomes de arquivos de imagem nos dois READMEs.
 -->
 
@@ -73,35 +84,58 @@ Não publique vídeos ou artes de personagens sem as autorizações necessárias
 
 | Funcionalidade | Descrição |
 |---|---|
-| **Reconhecimento de cartas físicas** | Identifica cartas impressas compatíveis pela câmera do iPhone, utilizando ARKit. |
-| **Invocação em RA** | Apresenta o personagem 3D animado correspondente na cena da câmera. |
-| **Animações dos personagens** | Carrega animações específicas para ações e resultados da partida. |
-| **Batalhas singleplayer** | Permite escolher um personagem e enfrentar um adversário controlado pelo jogo. |
-| **Multiplayer local** | Conecta dois iPhones próximos para batalhas multiplayer. |
-| **Sistema de batalha** | Coordena movimentos, regras, transições de estado e resultados. |
-| **Áudio e feedback tátil** | Reproduz efeitos e respostas táteis, incluindo sons distintos de vitória ou derrota conforme o resultado em cada aparelho. |
-| **Interface bilíngue** | Possui localização para português brasileiro e inglês. |
+| **Reconhecimento de cartas físicas** | Identifica cartas impressas compatíveis pela câmera do iPhone, utilizando rastreamento de imagens do ARKit. |
+| **Invocação em RA** | Carrega o personagem 3D animado correspondente na cena do mundo real exibida pela câmera. |
+| **Seleção de personagens** | Permite confirmar o personagem invocado ou escanear outra carta antes da batalha. |
+| **Singleplayer (PvE)** | Batalhas contra adversários controlados pelo jogo e selecionados aleatoriamente. |
+| **Multiplayer local (PvP)** | Conecta dois iPhones próximos por meio do MultipeerConnectivity para batalhas entre jogadores. |
+| **Sistema de batalha** | Coordena movimentos, regras, contagem regressiva, transições de estado e resultados das partidas. |
+| **Sincronização multiplayer** | Troca informações de gameplay entre os dispositivos e coordena o andamento e os resultados das partidas sob a perspectiva de cada jogador. |
+| **Animações 3D** | Conjuntos de animações específicos para cada personagem, incluindo postura de espera, ações de combate e reações/resultados de batalha. |
+| **Efeitos visuais de combate (VFX)** | Efeitos de ataque personalizados, incluindo rastros de movimento e cores características, complementam as animações 3D. |
+| **Efeitos sonoros (SFX)** | Feedback sonoro no escaneamento e na invocação, com sons distintos de vitória e derrota conforme o resultado de cada jogador. |
+| **Feedback tátil** | Respostas hápticas complementam as interações durante o jogo. |
+| **Interface localizada** | Menus e interface do jogo disponíveis em português brasileiro e inglês. |
 
-> Esses sistemas fazem parte de um projeto em evolução. Seu comportamento pode mudar conforme o gameplay e a estabilidade forem aprimorados.
+## Personagens jogáveis e efeitos de combate
+
+A versão de desenvolvimento conta atualmente com quatro personagens jogáveis, cada um associado a uma carta física e a seu próprio conjunto de animações 3D.
+
+| Personagem | Destaques da implementação |
+|---|---|
+| Homem-Aranha (Spider-Man) | Personagem 3D animado associado a uma carta própria. |
+| Stormtrooper | Combate animado com efeitos em forma de rastros que acompanham os movimentos de ataque. |
+| Goku | Personagem 3D animado integrado ao fluxo de invocação em RA e batalha. |
+| Sra. Incrível (Mulher-Elástica / Mrs. Incredible) | Ataques de soco e chute com efeitos visuais personalizados em tons quentes. |
+
+Os efeitos são desenvolvidos para destacar o movimento de cada ataque, em vez de apenas exibir efeitos genéricos ao redor dos personagens. Os rastros de ataque do Stormtrooper e os efeitos de soco e chute da Sra. Incrível estão entre as adições recentes à apresentação do combate.
+
+A preparação dos personagens envolve importação e rigging dos modelos 3D, preparação das animações e exportação dos arquivos no formato USDZ para uso no RealityKit. O jogo associa cada carta compatível aos identificadores do personagem e de suas animações.
+
+> Esses personagens reconhecíveis de terceiros são utilizados como referências de desenvolvimento e aprendizado. Seus modelos, texturas, arquivos de animação e artes das cartas não são distribuídos neste repositório público. Leia [Licenciamento](#licenciamento).
 
 ## Como funciona uma partida
 
 ### Singleplayer
 
-1. Inicie uma partida no modo singleplayer.
+1. Selecione o modo singleplayer no menu principal.
 2. Escaneie uma carta física compatível usando a câmera do iPhone.
-3. Visualize o personagem correspondente invocado em RA.
+3. Visualize o personagem animado correspondente invocado em RA.
 4. Escolha **Pronto** para confirmar ou **Trocar Personagem** para escanear outra carta.
-5. O jogo seleciona um adversário e inicia a batalha após uma contagem regressiva.
-6. Finalize a partida e receba o feedback correspondente ao resultado.
+5. O jogo seleciona aleatoriamente um adversário e inicia a contagem regressiva para a batalha.
+6. Dispute a partida utilizando o sistema de combate, com animações e efeitos visuais dos personagens.
+7. Receba o feedback correspondente ao resultado da batalha.
 
 ### Multiplayer local
 
-1. Os dois jogadores abrem o DeckSpawn em iPhones compatíveis diferentes.
-2. Os aparelhos estabelecem uma conexão multiplayer de proximidade.
-3. Os jogadores selecionam seus personagens e avançam pelo fluxo da partida.
-4. O jogo coordena os eventos e resultados da batalha entre os dispositivos.
-5. Cada iPhone apresenta o resultado sob a **perspectiva de seu próprio jogador** — por exemplo, o vencedor escuta o som de vitória, enquanto o outro escuta o som de derrota.
+1. Abra o DeckSpawn em dois iPhones compatíveis diferentes.
+2. Estabeleça uma conexão de proximidade no modo multiplayer utilizando MultipeerConnectivity.
+3. Cada jogador escolhe seu personagem escaneando uma carta física compatível.
+4. Ambos avançam pelo fluxo da partida e iniciam o combate.
+5. O jogo troca informações de gameplay entre os dispositivos para coordenar o andamento e os resultados da batalha.
+6. Cada iPhone apresenta o resultado sob a **perspectiva de seu próprio jogador**: o vencedor escuta o som de vitória, enquanto o jogador derrotado escuta o som de derrota.
+
+O multiplayer local está funcional e não depende de um servidor dedicado de jogos online nem do Game Center. Ambos os aparelhos precisam ter uma versão jogável do aplicativo instalada. Multiplayer pela internet e matchmaking remoto não estão implementados.
 
 ## Tecnologias utilizadas
 
@@ -110,10 +144,12 @@ Não publique vídeos ou artes de personagens sem as autorizações necessárias
 | **Swift** | Lógica do aplicativo, regras e gerenciamento de estado |
 | **SwiftUI** | Telas, menus e atualização da interface |
 | **ARKit** | Reconhecimento de imagens e rastreamento em RA |
-| **RealityKit** | Conteúdo de RA e apresentação de entidades 3D |
+| **RealityKit** | Apresentação de entidades 3D, reprodução de animações e efeitos de combate em RA |
 | **MultipeerConnectivity** | Comunicação de proximidade entre dispositivos no multiplayer |
 | **Xcode** | Desenvolvimento, configuração e testes para iOS |
-| **Blender / USDZ** | Preparação de modelos e animações 3D (assets não distribuídos aqui) |
+| **Blender / Mixamo** | Preparação de modelos 3D, rigging e fluxo de animação dos personagens |
+| **USDZ** | Formato dos modelos 3D e animações utilizados pelo RealityKit (assets não distribuídos aqui) |
+| **String Catalog (`.xcstrings`)** | Localização para português brasileiro e inglês |
 
 ## Arquitetura do projeto
 
@@ -157,14 +193,14 @@ DeckSpawn/                           # Repositório público
 
 | Arquivo | Responsabilidade |
 |---|---|
-| `Features/Shared/AR/ARViewContainer.swift` | Sessão de RA, reconhecimento das cartas e integração com o gameplay |
+| `Features/Shared/AR/ARViewContainer.swift` | Sessão de RA, reconhecimento das cartas, apresentação dos personagens, animações e efeitos de combate |
 | `Features/Shared/AR/GameARState.swift` | Estado compartilhado da experiência em RA |
 | `Features/Shared/Battle/` | Motor de batalha, movimentos, regras e estados |
 | `Features/Shared/Models/CardDatabase.swift` | Definições das cartas e identificadores dos personagens/modelos |
 | `Features/Shared/Models/CharacterAnimationSet.swift` | Configuração e busca de nomes de animações |
-| `Features/MultiPlayer/Services/MultiplayerService.swift` | Comunicação e coordenação multiplayer |
+| `Features/MultiPlayer/Services/MultiplayerService.swift` | Comunicação de proximidade entre aparelhos e coordenação multiplayer |
 | `Features/SinglePlayer/` | Fluxo e interface do modo solo |
-| `Services/Audio/SoundManager.swift` | Reprodução dos sons e feedback dos resultados |
+| `Services/Audio/SoundManager.swift` | Áudio de escaneamento, invocação e feedback dos resultados da partida |
 | `Localizable.xcstrings` | Traduções da interface |
 
 > **Por que o projeto Xcode ainda se chama `CardArenaAR`?** Esse era o nome utilizado no início do desenvolvimento. **DeckSpawn** é o nome público atual do jogo, mas o projeto Xcode e alguns identificadores internos ainda preservam o nome original.
@@ -211,22 +247,34 @@ Quem reutilizar o código deve adicionar **seus próprios assets ou recursos com
 
 ## Estado do desenvolvimento e próximos passos
 
-O DeckSpawn é um **projeto pessoal e acadêmico em andamento**, não um produto comercial finalizado. O desenvolvimento já abrange as bases de reconhecimento de cartas em RA, apresentação de personagens animados, fluxos de batalha singleplayer e multiplayer local, lógica de batalha, localização e feedback sonoro/tátil.
+O DeckSpawn é um protótipo funcional com finalidade pessoal, acadêmica e de portfólio, não um produto comercial finalizado. O foco atual está em aprimorar os modos de jogo já implementados e sua apresentação, em vez de expandir para serviços online.
 
-Entre os próximos objetivos considerados estão:
+### Funcionalidades implementadas
 
-- Corrigir casos de instabilidade e melhorar a experiência de escaneamento e jogo.
-- Refinar as animações, os efeitos e a apresentação visual.
-- Substituir conteúdos de personagens de terceiros por **personagens e artes autorais**.
-- Aprimorar a documentação e a reprodução das funcionalidades a partir do código público.
+- [x] Reconhecimento de cartas físicas e invocação de personagens animados em RA.
+- [x] Batalhas singleplayer contra adversários controlados pelo jogo.
+- [x] Multiplayer local funcional entre dois iPhones físicos.
+- [x] Quatro personagens jogáveis com conjuntos próprios de animações.
+- [x] Efeitos de combate personalizados, incluindo os ataques do Stormtrooper e da Sra. Incrível.
+- [x] Sons de escaneamento e invocação, feedback tátil e áudio de vitória/derrota específico para cada jogador.
+- [x] Localização para português brasileiro e inglês.
+- [x] Repositório público de código-fonte separado dos assets não distribuídos.
 
-Essas intenções podem mudar ao longo do desenvolvimento.
+### Melhorias futuras
+
+- [ ] Melhorar a confiabilidade do escaneamento, o desempenho e a estabilidade do jogo.
+- [ ] Refinar as animações, os efeitos visuais e a apresentação das batalhas.
+- [ ] Ampliar a documentação e facilitar testes com assets substitutos devidamente autorizados.
+- [ ] Adicionar screenshots e vídeos de gameplay a este README.
+- [ ] Explorar a substituição dos conteúdos de terceiros por personagens e artes autorais.
+
+**Escopo:** O multiplayer local é o modo de batalha entre jogadores oferecido pelo projeto. Multiplayer online, integração com Game Center e distribuição pública pela App Store estão fora do escopo atual. Este planejamento não representa um cronograma de lançamento.
 
 ## Repositório público e histórico do desenvolvimento
 
 O DeckSpawn foi originalmente desenvolvido em um **repositório privado** com o nome de projeto `CardArenaAR`. Este repositório público começa com uma **cópia selecionada do código-fonte**: o histórico Git privado original e os assets não distribuíveis não fazem parte dele.
 
-Portanto, um primeiro commit grande representa a **publicação de um projeto já desenvolvido**, e não todo o trabalho realizado em um único dia. Atualizações futuras poderão ser publicadas conforme a evolução do jogo.
+Portanto, um primeiro commit grande representa a **publicação de um projeto já desenvolvido**, e não todo o trabalho realizado em um único dia. O repositório público é agora a base principal para as próximas atualizações, enquanto o repositório privado original permanece como backup da versão anterior e de seus assets de desenvolvimento.
 
 ## Licenciamento
 
@@ -248,7 +296,7 @@ Os materiais de terceiros permanecem sujeitos aos direitos de seus respectivos t
 
 ## Sobre o projeto
 
-O DeckSpawn é um projeto pessoal e também acadêmico. Seu objetivo é explorar a engenharia de software para iOS por meio de um jogo que combina **realidade aumentada, interação com cartas físicas, animações 3D, interfaces e comunicação multiplayer local**.
+O DeckSpawn é um projeto pessoal e acadêmico voltado à prática da engenharia de software para iOS. Ele reúne **realidade aumentada, interação com cartas físicas, animações 3D, efeitos de combate, gerenciamento de estados de jogo, design de interfaces, localização e networking multiplayer local** em um único protótipo jogável.
 
 <!-- LINK DO PORTFÓLIO — substitua esta linha quando a página do seu site estiver disponível.
 **Portfólio:** [Conheça o projeto DeckSpawn](URL_DO_SEU_PORTFOLIO)
