@@ -12,6 +12,8 @@ struct MainMenuView: View {
 
     @State private var showingCollection = false
 
+    @State private var showingHowToPlay = false
+
     private let cyan = Color(red: 0.20, green: 0.84, blue: 1.00)
 
     private let violet = Color(red: 0.56, green: 0.39, blue: 1.00)
@@ -58,6 +60,10 @@ struct MainMenuView: View {
 
             CharacterCollectionView()
 
+        }
+
+        .sheet(isPresented: $showingHowToPlay) {
+            HowToPlayView()
         }
 
         .sheet(isPresented: $showingSettings) {
@@ -139,6 +145,22 @@ struct MainMenuView: View {
                 accent: cyan,
 
                 action: { showingCollection = true }
+
+            )
+
+            menuButton(
+
+                title: LocalizedStringKey(
+                    DeckSpawnL10n.languageCode.hasPrefix("pt") ? "COMO JOGAR" : "HOW TO PLAY"
+                ),
+                subtitle: LocalizedStringKey(
+                    DeckSpawnL10n.languageCode.hasPrefix("pt")
+                        ? "Aprenda as regras e domine as batalhas"
+                        : "Learn the rules and master the battles"
+                ),
+                icon: "book.closed.fill",
+                accent: violet,
+                action: { showingHowToPlay = true }
 
             )
 

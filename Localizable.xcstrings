@@ -392,6 +392,17 @@
         }
       }
     },
+    "Aprenda as regras e domine as batalhas" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Learn the rules and master the battles"
+          }
+        }
+      }
+    },
     "ARENA PRONTA" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -555,6 +566,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "COLLECTION"
+          }
+        }
+      }
+    },
+    "COMO JOGAR" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HOW TO PLAY"
           }
         }
       }
