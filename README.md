@@ -91,7 +91,7 @@ Do not publish footage or character artwork unless you have the necessary rights
 | **AR character summoning** | Loads the corresponding animated 3D fighter into the real-world camera scene. |
 | **Character selection** | Lets the player confirm a summoned character or scan a different card before battle. |
 | **Single-player (PvE)** | Battles against a randomly selected, game-controlled opponent. |
-| **Local multiplayer (PvP)** | Connects two nearby iPhones through MultipeerConnectivity for player-versus-player battles. |
+| **Local multiplayer (PvP)** | Connects two nearby iPhones through Network.framework + Bonjour for player-versus-player battles. |
 | **Battle system** | Coordinates combat moves, rules, the pre-battle countdown, state transitions, and match results. |
 | **Multiplayer synchronization** | Exchanges gameplay information between devices and coordinates match progression and results from each player's perspective. |
 | **3D character animations** | Character-specific animation sets for idle poses, combat actions, and battle reactions/outcomes. |
@@ -148,7 +148,7 @@ The local multiplayer mode is functional and does not rely on a dedicated online
 | **SwiftUI** | Screens, menus, and UI updates |
 | **ARKit** | Image recognition and AR tracking |
 | **RealityKit** | 3D entity presentation, animation playback, and AR combat effects |
-| **MultipeerConnectivity** | Nearby-device communication for multiplayer |
+| **Network.framework** | Nearby-device communication for multiplayer |
 | **Xcode** | iOS development, configuration, and testing |
 | **Blender / Mixamo** | 3D model preparation, rigging, and character animation workflow |
 | **USDZ** | 3D model and animation asset format used in RealityKit (assets not distributed here) |
