@@ -4,7 +4,7 @@
 
 **Dê vida às cartas físicas com realidade aumentada.**
 
-Um **jogo nativo de batalha com cartas para iOS**, desenvolvido como projeto pessoal e acadêmico. Criado com **Swift, SwiftUI, ARKit, RealityKit e MultipeerConnectivity**, o DeckSpawn transforma cartas físicas em lutadores 3D animados, combinando batalhas em realidade aumentada, efeitos visuais personalizados, singleplayer e multiplayer local entre dois iPhones.
+Um **jogo nativo de batalha com cartas para iOS**, desenvolvido como projeto pessoal e acadêmico. Criado com **Swift, SwiftUI, ARKit, RealityKit e Network.framework**, o DeckSpawn transforma cartas físicas em lutadores 3D animados, combinando batalhas em realidade aumentada, efeitos visuais personalizados, singleplayer e multiplayer local entre dois iPhones.
 
 **Escaneie uma carta. Invoque um personagem. Batalhe em RA.**
 
@@ -90,7 +90,7 @@ Não publique vídeos ou artes de personagens sem as autorizações necessárias
 | **Invocação em RA** | Carrega o personagem 3D animado correspondente na cena do mundo real exibida pela câmera. |
 | **Seleção de personagens** | Permite confirmar o personagem invocado ou escanear outra carta antes da batalha. |
 | **Singleplayer (PvE)** | Batalhas contra adversários controlados pelo jogo e selecionados aleatoriamente. |
-| **Multiplayer local (PvP)** | Conecta dois iPhones próximos por meio do MultipeerConnectivity para batalhas entre jogadores. |
+| **Multiplayer local (PvP)** | Conecta dois iPhones próximos por meio do Network.framework para batalhas entre jogadores. |
 | **Sistema de batalha** | Coordena movimentos, regras, contagem regressiva, transições de estado e resultados das partidas. |
 | **Sincronização multiplayer** | Troca informações de gameplay entre os dispositivos e coordena o andamento e os resultados das partidas sob a perspectiva de cada jogador. |
 | **Animações 3D** | Conjuntos de animações específicos para cada personagem, incluindo postura de espera, ações de combate e reações/resultados de batalha. |
@@ -131,7 +131,7 @@ A preparação dos personagens envolve importação e rigging dos modelos 3D, pr
 ### Multiplayer local
 
 1. Abra o DeckSpawn em dois iPhones compatíveis diferentes.
-2. Estabeleça uma conexão de proximidade no modo multiplayer utilizando MultipeerConnectivity.
+2. Estabeleça uma conexão de proximidade no modo multiplayer utilizando Network.framework.
 3. Cada jogador escolhe seu personagem escaneando uma carta física compatível.
 4. Ambos avançam pelo fluxo da partida e iniciam o combate.
 5. O jogo troca informações de gameplay entre os dispositivos para coordenar o andamento e os resultados da batalha.
@@ -147,7 +147,7 @@ O multiplayer local está funcional e não depende de um servidor dedicado de jo
 | **SwiftUI** | Telas, menus e atualização da interface |
 | **ARKit** | Reconhecimento de imagens e rastreamento em RA |
 | **RealityKit** | Apresentação de entidades 3D, reprodução de animações e efeitos de combate em RA |
-| **MultipeerConnectivity** | Comunicação de proximidade entre dispositivos no multiplayer |
+| **Network.framework** | Comunicação de proximidade entre dispositivos no multiplayer |
 | **Xcode** | Desenvolvimento, configuração e testes para iOS |
 | **Blender / Mixamo** | Preparação de modelos 3D, rigging e fluxo de animação dos personagens |
 | **USDZ** | Formato dos modelos 3D e animações utilizados pelo RealityKit (assets não distribuídos aqui) |
